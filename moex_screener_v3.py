@@ -24,6 +24,7 @@ import signal
 import statistics
 import sys
 import time
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -98,6 +99,7 @@ def _stomp_parse(data) -> _STOMPFrame:
 # ---------------------------------------------------------------------------
 MOEX_WS_URL = "wss://iss.moex.com/infocx/v3/websocket"
 MOEX_DOMAIN = "DEMO"  # guest access; change to "MOEX" with real key
+BASE = "https://iss.moex.com/iss"  # REST fallback base
 
 # Default stock tickers (equities)
 EQUITIES = [
@@ -651,6 +653,77 @@ class MoexWebSocket:
 
 
 # ---------------------------------------------------------------------------
+# REST fallback
+# ---------------------------------------------------------------------------
+def _fetch_boardprice_rest(ticker: str) -> dict:
+    """Fallback: fetch the current board-price via MOEX ISS REST.
+
+    Returns a dict with keys last, bid, ask, volume, day_volume, day_value
+    (values may be None when the field is absent). Used when WebSocket is
+    unavailable or when book/trades/OI sources are not authorized.
+    """
+    url = (
+        f"{BASE}/engines/stock/markets/shares/boards/TQBR"
+        f"/securities/{ticker}/boardprice.json?iss.meta=off&iss.depth=5"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "moex-screener/3.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return {}
+
+    md = payload.get("marketdata") or {}
+    rows = md.get("data") or []
+    if not rows:
+        return {}
+    cols = md.get("columns") or []
+    d = dict(zip(cols, rows[-1]))
+
+    def _f(k):
+        v = d.get(k)
+        if v in (None, ""):
+            return None
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return None
+
+    return {
+        "last": _f("LAST"),
+        "bid": _f("BID"),
+        "ask": _f("OFFER"),
+        "volume": _f("QTY") if _f("QTY") is not None else _f("VOLTODAY"),
+        "day_volume": _f("VOLTODAY"),
+        "day_value": _f("VALTODAY") if _f("VALTODAY") is not None else _f("VALUE"),
+    }
+
+
+def _fetch_oi_rest(ticker: str) -> Optional[float]:
+    """Fetch open interest via MOEX ISS REST (public endpoint)."""
+    url = (
+        f"{BASE}/engines/stock/markets/futures/boards/FUTURE"
+        f"/securities/{ticker}/openInterest.json?iss.meta=off"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "moex-screener/3.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+    rows = (payload.get("data") or [])
+    if not rows:
+        return None
+    cols = payload.get("columns") or []
+    d = dict(zip(cols, rows[-1]))
+    oi = d.get("OPENINTEREST")
+    try:
+        return float(oi) if oi not in (None, "") else None
+    except (ValueError, TypeError):
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
 class ScreenerEngine:
@@ -676,10 +749,36 @@ class ScreenerEngine:
         ]
         self.ws = MoexWebSocket(self.equities, self.futures)
         self.running = True
+        self._last_oi_ts = 0.0
 
     def _handle_sigint(self, *_):
         print("\n[!] Stop")
         self.running = False
+
+    def _poll_rest_once(self):
+        """Fallback REST polling: update states from boardprice + OI."""
+        ts = time.time()
+        for t in self.equities:
+            data = _fetch_boardprice_rest(t)
+            if not data:
+                continue
+            st = self.states.setdefault(t, TickerState(t))
+            st.last = data.get("last")
+            st.bid = data.get("bid")
+            st.ask = data.get("ask")
+            st.volume = data.get("volume")
+            st.day_volume = data.get("day_volume")
+            st.day_value = data.get("day_value")
+            if st.last is not None:
+                st.push_candle(ts, st.last, st.volume or 0.0)
+                st.push_trade(st.last, ts)
+
+        if time.time() - self._last_oi_ts >= 300:
+            for f in self.futures:
+                oi = _fetch_oi_rest(f)
+                if oi is not None:
+                    self.oi_module.set_oi(f, oi)
+            self._last_oi_ts = time.time()
 
     def collect_signals(self) -> list[Signal]:
         ctx = {"ts": time.time()}
@@ -713,25 +812,38 @@ class ScreenerEngine:
             print("\n  (no signals - quiet market)")
         print()
 
-    async def run(self, cycles: int | None = None):
+    async def run(self, cycles: int | None = None, use_ws: bool = True):
+        mode = "WebSocket" if use_ws else "REST fallback"
         print(f"MOEX Screener v3 — {len(self.equities)} equities + "
-              f"{len(self.futures)} futures OI, render {RENDER_SEC}s")
-        print("Connecting to MOEX WebSocket...")
+              f"{len(self.futures)} futures OI, {mode}, render {RENDER_SEC}s")
         print("Ctrl+C to stop\n")
         signal.signal(signal.SIGINT, self._handle_sigint)
 
-        await self.ws.connect()
+        if use_ws:
+            try:
+                await self.ws.connect()
+                ws_active = True
+            except Exception as e:
+                print(f"[WS] Failed: {e}. Falling back to REST.")
+                ws_active = False
+        else:
+            ws_active = False
 
         i = 0
         while self.running:
-            await asyncio.sleep(RENDER_SEC)
+            if ws_active:
+                await asyncio.sleep(RENDER_SEC)
+            else:
+                self._poll_rest_once()
+                await asyncio.sleep(1.0)
             sigs = self.collect_signals()
             self.render(sigs)
             i += 1
             if cycles and i >= cycles:
                 break
 
-        await self.ws.close()
+        if use_ws:
+            await self.ws.close()
         print("\nStopped.")
 
 
@@ -740,10 +852,15 @@ class ScreenerEngine:
 # ---------------------------------------------------------------------------
 async def main():
     cycles: int | None = None
-    if len(sys.argv) > 1 and sys.argv[1].isdigit():
-        cycles = int(sys.argv[1])
+    use_ws = True
+    args = sys.argv[1:]
+    if "--rest" in args:
+        use_ws = False
+        args.remove("--rest")
+    if args and args[0].isdigit():
+        cycles = int(args[0])
     engine = ScreenerEngine()
-    await engine.run(cycles=cycles)
+    await engine.run(cycles=cycles, use_ws=use_ws)
 
 
 if __name__ == "__main__":
