@@ -636,7 +636,7 @@ class M12_Scalping(Module):
 # M13 — Volatility (ATR-style on last 5 candles)
 # ---------------------------------------------------------------------------
 class M13_Volatility(Module):
-    name = "M13 Волатильность"
+    name = "M13 Движок"
 
     def evaluate(self, states, ctx):
         out = []
@@ -667,7 +667,7 @@ class M13_Volatility(Module):
 # M14 — VWAP deviation
 # ---------------------------------------------------------------------------
 class M14_VWAP(Module):
-    name = "M14 Отклонение VWAP"
+    name = "M14 Срыв от средней"
 
     def evaluate(self, states, ctx):
         out = []
@@ -698,31 +698,31 @@ class M14_VWAP(Module):
 
 
 # ---------------------------------------------------------------------------
-# M15 — ETF/Fan screener (top volume, TQDR)
+# M15 — Крупные деньги (whale / institutional volume)
 # ---------------------------------------------------------------------------
-ETF_TICKERS = os.getenv("ETF_TICKERS", "SBER,GAZP,VTBR,LKOH,TATN,ROSN").split(",")
-
 class M15_Fan(Module):
-    name = "M15 Фанаты (ETF)"
+    name = "M15 Крупные деньги"
+
+    def __init__(self):
+        self.threshold = _env_int("FAN_VOLUME_THRESHOLD", 1_000_000)
 
     def evaluate(self, states, ctx):
         out = []
-        # Top-volume fan/ETF candidates: mark tickers with very high volume
-        # as "fan" (institutional) activity when day_volume > threshold
+        # Tickers with day volume >= threshold: large investors active
         for t, s in states.items():
             if not s.day_volume:
                 continue
-            if s.day_volume >= 1_000_000:
+            if s.day_volume >= self.threshold:
                 out.append(Signal(
                     self.name, t, float(s.day_volume),
-                    f"фанат активность: {s.day_volume:,.0f} шт за день",
-                    severity=min(4, int(s.day_volume / 1e6)),
+                    f"крупные деньги: {s.day_volume:,.0f} шт за день",
+                    severity=min(5, int(s.day_volume / 1e6)),
                 ))
         return out
 
 
 # ---------------------------------------------------------------------------
-# M16 — Forex scanner (CURREN board)
+# M16 — Валюты (forex / CURREN board)
 # ---------------------------------------------------------------------------
 FOREX_TICKERS = [
     "USD-05M26", "USD-09M26", "EUR-05M26", "EUR-09M26",
@@ -761,7 +761,7 @@ def _fetch_forex_boardprice(security: str) -> dict:
 
 
 class M16_Forex(Module):
-    name = "M16 Форекс"
+    name = "M16 Валюты"
 
     def __init__(self):
         self.forex_states: dict[str, TickerState] = {}
