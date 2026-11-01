@@ -619,7 +619,6 @@ class M12_Scalping(Module):
             avg_size = s.avg_trade_size
             if avg_size is None or avg_size <= 0:
                 continue
-            # Use current volume as the last-trade size
             last_vol = s.volume
             if last_vol is None:
                 continue
@@ -629,6 +628,169 @@ class M12_Scalping(Module):
                     self.name, t, round(ratio, 1),
                     f"x{ratio:.1f} от плана ({last_vol:,.0f} шт)",
                     severity=min(4, int(ratio)),
+                ))
+        return out
+
+
+# ---------------------------------------------------------------------------
+# M13 — Volatility (ATR-style on last 5 candles)
+# ---------------------------------------------------------------------------
+class M13_Volatility(Module):
+    name = "M13 Волатильность"
+
+    def evaluate(self, states, ctx):
+        out = []
+        for t, s in states.items():
+            h = s.history
+            if len(h) < 6:
+                continue
+            # 5-period range = max(high)-min(low) approximated by last value
+            recent = h[-6:]
+            prices = [p for _, p, _ in recent if p]
+            if len(prices) < 2:
+                continue
+            hi = max(prices)
+            lo = min(prices)
+            if lo == 0:
+                continue
+            range_pct = (hi - lo) / lo
+            if range_pct >= 0.01:  # >= 1% range in last ~5 polls
+                out.append(Signal(
+                    self.name, t, round(range_pct * 100, 3),
+                    f"диапазон {range_pct*100:.2f}% за {len(h)-1} обновлений",
+                    severity=min(4, int(range_pct * 1000)),
+                ))
+        return out
+
+
+# ---------------------------------------------------------------------------
+# M14 — VWAP deviation
+# ---------------------------------------------------------------------------
+class M14_VWAP(Module):
+    name = "M14 Отклонение VWAP"
+
+    def evaluate(self, states, ctx):
+        out = []
+        for t, s in states.items():
+            h = s.history
+            if len(h) < 5:
+                continue
+            prices = [p for _, p, _ in h[-5:] if p]
+            vols = [v for _, _, v in h[-5:] if v]
+            if not prices or not vols:
+                continue
+            # VWAP = sum(price*vol) / sum(vol)
+            total_vol = sum(vols)
+            if total_vol == 0:
+                continue
+            vwap = sum(p * v for p, v in zip(prices, vols)) / total_vol
+            last = prices[-1]
+            dev_pct = (last - vwap) / vwap if vwap else 0
+            if abs(dev_pct) >= 0.005:  # >= 0.5% from VWAP
+                side = "над" if dev_pct > 0 else "под"
+                out.append(Signal(
+                    self.name, t, round(dev_pct * 100, 3),
+                    f"{side} VWAP на {abs(dev_pct)*100:.2f}% "
+                    f"(vwap {vwap:.4f}, last {last:.4f})",
+                    severity=min(4, int(abs(dev_pct * 1000))),
+                ))
+        return out
+
+
+# ---------------------------------------------------------------------------
+# M15 — ETF/Fan screener (top volume, TQDR)
+# ---------------------------------------------------------------------------
+ETF_TICKERS = os.getenv("ETF_TICKERS", "SBER,GAZP,VTBR,LKOH,TATN,ROSN").split(",")
+
+class M15_Fan(Module):
+    name = "M15 Фанаты (ETF)"
+
+    def evaluate(self, states, ctx):
+        out = []
+        # Top-volume fan/ETF candidates: mark tickers with very high volume
+        # as "fan" (institutional) activity when day_volume > threshold
+        for t, s in states.items():
+            if not s.day_volume:
+                continue
+            if s.day_volume >= 1_000_000:
+                out.append(Signal(
+                    self.name, t, float(s.day_volume),
+                    f"фанат активность: {s.day_volume:,.0f} шт за день",
+                    severity=min(4, int(s.day_volume / 1e6)),
+                ))
+        return out
+
+
+# ---------------------------------------------------------------------------
+# M16 — Forex scanner (CURREN board)
+# ---------------------------------------------------------------------------
+FOREX_TICKERS = [
+    "USD-05M26", "USD-09M26", "EUR-05M26", "EUR-09M26",
+    "CNY-05M26", "BRL-05M26", "GBP-05M26",
+]
+
+def _fetch_forex_boardprice(security: str) -> dict:
+    url = (
+        f"{BASE}/engines/stock/markets/forex/boards/CURREN"
+        f"/securities/{security}/boardprice.json?iss.meta=off&iss.depth=5"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "moex-screener/3.1"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return {}
+    md = payload.get("marketdata") or {}
+    rows = md.get("data") or []
+    if not rows:
+        return {}
+    cols = md.get("columns") or []
+    d = dict(zip(cols, rows[-1]))
+
+    def _f(k):
+        v = d.get(k)
+        if v in (None, ""):
+            return None
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return None
+
+    return {"last": _f("LAST"), "bid": _f("BID"), "ask": _f("OFFER"),
+            "spread": _f("SPREAD"), "value": _f("VALTODAY")}
+
+
+class M16_Forex(Module):
+    name = "M16 Форекс"
+
+    def __init__(self):
+        self.forex_states: dict[str, TickerState] = {}
+
+    def poll(self):
+        for sec in FOREX_TICKERS:
+            data = _fetch_forex_boardprice(sec)
+            if not data:
+                continue
+            ts_ = self.forex_states.setdefault(sec, TickerState(sec))
+            ts_.last = data.get("last")
+            ts_.bid = data.get("bid")
+            ts_.ask = data.get("ask")
+            ts_.day_value = data.get("value")
+            if ts_.last:
+                ts_.push_candle(time.time(), ts_.last, 0.0)
+
+    def evaluate(self, states, ctx):
+        self.poll()
+        out = []
+        for sec, s in self.forex_states.items():
+            if not s.last:
+                continue
+            width = (s.ask - s.bid) if s.ask and s.bid else 0
+            if s.day_value and s.day_value >= 1_000_000:
+                out.append(Signal(
+                    self.name, sec, float(s.day_value),
+                    f"day value {s.day_value:,.0f} RUB, spread {width:.4f}",
+                    severity=2,
                 ))
         return out
 
@@ -737,6 +899,10 @@ class ScreenerEngine:
             self.arba_module,
             self.trace_module,
             M12_Scalping(),
+            M13_Volatility(),
+            M14_VWAP(),
+            M15_Fan(),
+            M16_Forex(),
         ]
         self.running = True
         self._last_oi_ts = 0.0
@@ -848,7 +1014,6 @@ class ScreenerEngine:
                     break
                 time.sleep(0.5)
         print("\nStopped.")
-
 
 # ---------------------------------------------------------------------------
 # Entry
