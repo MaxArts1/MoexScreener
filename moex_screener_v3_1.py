@@ -90,6 +90,10 @@ ICEBERG_PRICE_TOLERANCE = _env_float("ICEBERG_PRICE_TOLERANCE", 0.005)
 ICEBERG_HISTORY_WINDOW = _env_int("ICEBERG_HISTORY_WINDOW", 20)
 SPREAD_ALERT_THRESHOLD = _env_float("SPREAD_ALERT_THRESHOLD", 0.3)
 
+# Robot DB (M08 v2)
+ROBOT_DB_DIR = os.getenv("ROBOT_DB_DIR", "E:/Deepseek/ReTools/moex-screener/robot_db")
+SOUND_ALERT_ENABLED = os.getenv("SOUND_ALERT_ENABLED", "true").lower() == "true"
+
 
 # ---------------------------------------------------------------------------
 # STOMP utilities (same as v3)
@@ -443,13 +447,143 @@ class M07_IcebergSingle(Module):
 
 
 # ---------------------------------------------------------------------------
-# M08 — Robots
+# M08 — Robots (with session tracking, DB, and countdown)
 # ---------------------------------------------------------------------------
+@dataclass
+class RobotSession:
+    """Tracks one robot activity session."""
+    ticker: str
+    detected_at: float          # time when robot first detected
+    cv: float                   # coefficient of variation
+    start_price: float
+    start_volume: float
+    last_update: float = 0.0
+    last_price: float = 0.0
+    last_volume: float = 0.0
+    active: bool = True
+    next_strike_estimate: float = 0.0  # seconds until next expected strike
+
+    def record(self, ts: float, price: float, vol: float, cv: float):
+        self.last_update = ts
+        self.last_price = price
+        self.last_volume = vol
+        self.cv = cv
+
+    def compute_next_strike(self) -> float:
+        """Estimate seconds until next robot strike based on observed cadence."""
+        if len(self.gaps) < 2:
+            return 0.0
+        median_gap = statistics.median(self.gaps)
+        return max(0.0, median_gap)
+
+    @property
+    def price_move(self) -> float:
+        if self.start_price == 0:
+            return 0.0
+        return (self.last_price - self.start_price) / self.start_price
+
+    @property
+    def duration_sec(self) -> float:
+        return max(0.0, self.last_update - self.detected_at)
+
+    def to_dict(self) -> dict:
+        return {
+            "ticker": self.ticker,
+            "detected_at": self.detected_at,
+            "last_update": self.last_update,
+            "duration_sec": self.duration_sec,
+            "start_price": self.start_price,
+            "last_price": self.last_price,
+            "price_move_pct": round(self.price_move * 100, 4),
+            "start_volume": self.start_volume,
+            "last_volume": self.last_volume,
+            "cv": round(self.cv, 4),
+            "active": self.active,
+        }
+
+
 class M08_Robots(Module):
     name = "M08 Роботы"
 
+    def __init__(self):
+        self.sessions: dict[str, RobotSession] = {}
+        self._db_dir = ROBOT_DB_DIR
+        self._db_file = os.path.join(self._db_dir, "robots.json")
+        self._last_db_write = 0.0
+        self._db_lock = False
+        os.makedirs(self._db_dir, exist_ok=True)
+        self._load_db()
+
+    def _load_db(self):
+        """Load robot sessions from JSON DB."""
+        if os.path.exists(self._db_file):
+            try:
+                with open(self._db_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for r in data.get("robots", []):
+                    key = f"{r['ticker']}"
+                    if key not in self.sessions:
+                        s = RobotSession(
+                            ticker=r["ticker"],
+                            detected_at=r.get("detected_at", 0),
+                            cv=r.get("cv", 0),
+                            start_price=r.get("start_price", 0),
+                            start_volume=r.get("start_volume", 0),
+                        )
+                        s.active = r.get("active", False)
+                        s.last_price = r.get("last_price", 0)
+                        s.last_volume = r.get("last_volume", 0)
+                        s.last_update = r.get("last_update", 0)
+                        self.sessions[key] = s
+            except Exception as e:
+                print(f"[M08] DB load error: {e}")
+
+    def _save_db(self, force: bool = False):
+        """Persist robot sessions to JSON DB (throttled to 30s)."""
+        if not force and time.time() - self._last_db_write < 30:
+            return
+        try:
+            payload = {
+                "updated_at": time.time(),
+                "robots": [s.to_dict() for s in self.sessions.values()],
+            }
+            tmp = self._db_file + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+            os.replace(tmp, self._db_file)
+            self._last_db_write = time.time()
+        except Exception as e:
+            print(f"[M08] DB save error: {e}")
+
+    @staticmethod
+    def _play_sound():
+        """Play a short Windows system beep (double 'ding')."""
+        try:
+            if os.name == "nt":
+                import ctypes
+                # 1000 Hz for 200ms, 1500 Hz for 200ms
+                ctypes.windll.winmm.PlaySoundW(b"\x00\x00\x00", None, 0x40)
+            else:
+                import subprocess
+                subprocess.run(["zenity", "--notification",
+                                "--text", "MOEX robot detected"],
+                               timeout=1)
+        except Exception:
+            pass
+
+    def _maybe_alert_sound(self, ticker: str, is_new: bool):
+        """Trigger sound on new detection or on strike countdown hitting 0."""
+        if not SOUND_ALERT_ENABLED:
+            return
+        if is_new:
+            print(f"    [SOUND] robot alert: {ticker} (new detection)")
+            self._play_sound()
+
     def evaluate(self, states, ctx):
         out = []
+        ts_now = ctx.get("ts", time.time())
+        new_alerts = []
+
         for t, s in states.items():
             ts = s.trade_times
             if len(ts) < 8:
@@ -459,13 +593,59 @@ class M08_Robots(Module):
                 continue
             mu = statistics.fmean(gaps)
             sd = statistics.pstdev(gaps) if len(gaps) > 1 else 0
-            if mu > 0 and sd > 0 and (sd / mu) < 0.25:
-                cv = sd / mu
-                out.append(Signal(
-                    self.name, t, round(cv, 2),
-                    f"регулярность тиков (CV={cv:.2f})",
-                    severity=3,
-                ))
+            if mu <= 0 or sd == 0:
+                continue
+            cv = sd / mu
+            if cv >= 0.25:
+                # Not a robot — remove stale session if exists
+                if t in self.sessions and self.sessions[t].active:
+                    self.sessions[t].active = False
+                continue
+
+            # Robot detected / continuing
+            key = t
+            sess = self.sessions.get(key)
+            is_new = False
+            if sess is None or not sess.active:
+                sess = RobotSession(
+                    ticker=t,
+                    detected_at=ts_now,
+                    cv=cv,
+                    start_price=s.last or 0.0,
+                    start_volume=s.volume or 0.0,
+                )
+                self.sessions[key] = sess
+                is_new = True
+
+            # Store gaps on session (for countdown)
+            sess.gaps = gaps
+            sess.record(ts_now, s.last or 0.0, s.volume or 0.0, cv)
+            sess.next_strike_estimate = sess.compute_next_strike()
+
+            next_in = sess.next_strike_estimate
+            text = (
+                f"CV={cv:.3f}, ~{next_in:.1f}s до удара, "
+                f"{sess.duration_sec:.0f}s в работе, "
+                f"цена {sess.start_price:.4f} → {sess.last_price:.4f} "
+                f"({sess.price_move * 100:+.3f}%)"
+            )
+
+            out.append(Signal(
+                self.name, t, round(cv, 3),
+                text,
+                severity=min(5, int(cv * 100) + 2),
+            ))
+
+            if is_new:
+                new_alerts.append(t)
+                self._maybe_alert_sound(t, is_new=True)
+
+        # Persist DB every cycle (throttled)
+        if new_alerts:
+            self._save_db(force=True)
+        else:
+            self._save_db(force=False)
+
         return out
 
 
