@@ -97,31 +97,37 @@ def _stomp_parse(data) -> _STOMPFrame:
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-MOEX_WS_URL = "wss://iss.moex.com/infocx/v3/websocket"
-MOEX_DOMAIN = "DEMO"  # guest access; change to "MOEX" with real key
-BASE = "https://iss.moex.com/iss"  # REST fallback base
+import os
 
-# Default stock tickers (equities)
-EQUITIES = [
-    "SBER", "GAZP", "LKOH", "VTBR", "MGNT",
-    "ROSN", "GMKN", "TATN", "SNGS", "PLZT",
-]
+MOEX_WS_URL = os.getenv("MOEX_WS_URL", "wss://iss.moex.com/infocx/v3/websocket")
+MOEX_DOMAIN = os.getenv("MOEX_DOMAIN", "DEMO")
+MOEX_LOGIN = os.getenv("MOEX_LOGIN", "guest")
+MOEX_PASSCODE = os.getenv("MOEX_PASSCODE", "guest")
+BASE = os.getenv("MOEX_REST_BASE", "https://iss.moex.com/iss")
 
-# Default futures tickers for OI module
-FUTURES = [
-    "SIU6", "BRU6", "GDH6", "MEU6",
-]
+# Tickers (comma-separated, overridable via env)
+def _csv(name: str, default: str) -> list[str]:
+    return [t.strip().upper() for t in os.getenv(name, default).split(",") if t.strip()]
+
+EQUITIES = _csv("EQUITIES", "SBER,GAZP,LKOH,VTBR,MGNT,ROSN,GMKN,TATN,SNGS,PLZT")
+FUTURES = _csv("FUTURES", "SIU6,BRU6,GDH6,MEU6")
 
 # Poll interval for the render loop (s)
-RENDER_SEC = 5
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, default))
+    except (ValueError, TypeError):
+        return float(default)
+
+RENDER_SEC = _env_float("RENDER_SEC", 5.0)
 
 # Iceberg detection thresholds
-ICEBERG_VOLUME_SPIKE_PCT = 2.0
-ICEBERG_PRICE_TOLERANCE = 0.005
-ICEBERG_HISTORY_WINDOW = 20
+ICEBERG_VOLUME_SPIKE_PCT = _env_float("ICEBERG_VOLUME_SPIKE_PCT", 2.0)
+ICEBERG_PRICE_TOLERANCE = _env_float("ICEBERG_PRICE_TOLERANCE", 0.005)
+ICEBERG_HISTORY_WINDOW = int(_env_float("ICEBERG_HISTORY_WINDOW", 20))
 
 # Spread alert threshold (rubles)
-SPREAD_ALERT_THRESHOLD = 0.3
+SPREAD_ALERT_THRESHOLD = _env_float("SPREAD_ALERT_THRESHOLD", 0.3)
 
 
 # ---------------------------------------------------------------------------
