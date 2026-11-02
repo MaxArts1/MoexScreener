@@ -271,7 +271,7 @@ class Module:
 # M01 — Activity
 # ---------------------------------------------------------------------------
 class M01_Activity(Module):
-    name = "M01 Активность"
+    name = "М1 Кто торгуется"
 
     def evaluate(self, states, ctx):
         out = []
@@ -289,7 +289,7 @@ class M01_Activity(Module):
 # M02 — Price jolt
 # ---------------------------------------------------------------------------
 class M02_PriceJolt(Module):
-    name = "M02 Резкие движения"
+    name = "М2 Скачок цены"
 
     def evaluate(self, states, ctx):
         out = []
@@ -308,7 +308,7 @@ class M02_PriceJolt(Module):
 # M03 — Volume spike
 # ---------------------------------------------------------------------------
 class M03_VolumeSpike(Module):
-    name = "M03 Всплески объёма"
+    name = "М3 Всплеск объёма"
 
     def evaluate(self, states, ctx):
         out = []
@@ -338,7 +338,7 @@ class M03_VolumeSpike(Module):
 # M04 — Big trades
 # ---------------------------------------------------------------------------
 class M04_BigTrades(Module):
-    name = "M04 Крупные сделки"
+    name = "М4 Мегасделки"
 
     def evaluate(self, states, ctx):
         out = []
@@ -359,7 +359,7 @@ class M04_BigTrades(Module):
 # M05 — Plites (real book depth 5)
 # ---------------------------------------------------------------------------
 class M05_Plites(Module):
-    name = "M05 Плиты"
+    name = "М5 Толстые уровни"
 
     def evaluate(self, states, ctx):
         out = []
@@ -392,7 +392,7 @@ class M05_Plites(Module):
 # M06 — Iceberg (all tickers)
 # ---------------------------------------------------------------------------
 class M06_IcebergAll(Module):
-    name = "M06 Айсберги (все)"
+    name = "М6 Айсберг-радар"
 
     def evaluate(self, states, ctx):
         out = []
@@ -423,7 +423,7 @@ class M06_IcebergAll(Module):
 # M07 — Iceberg single
 # ---------------------------------------------------------------------------
 class M07_IcebergSingle(Module):
-    name = "M07 Айсберг (1 тикер)"
+    name = "М7 Айсберг (по одному)"
 
     def evaluate(self, states, ctx):
         t = next(iter(states), None)
@@ -503,7 +503,7 @@ class RobotSession:
 
 
 class M08_Robots(Module):
-    name = "M08 Роботы"
+    name = "М8 Роботы (радар)"
 
     def __init__(self):
         self.sessions: dict[str, RobotSession] = {}
@@ -653,7 +653,7 @@ class M08_Robots(Module):
 # M09 — Open Interest
 # ---------------------------------------------------------------------------
 class M09_OpenInterest(Module):
-    name = "M09 Открытый интерес"
+    name = "М9 Открытый интерес"
 
     def __init__(self, futures: list | None = None):
         self.futures = futures or FUTURES
@@ -680,7 +680,7 @@ class M09_OpenInterest(Module):
 # M10 — Arba (Arbitrage pairs with fair price)
 # ---------------------------------------------------------------------------
 class M10_Arba(Module):
-    name = "M10 Arba (спреды)"
+    name = "М10 Арбитраж"
 
     def __init__(self, pairs: list[tuple[str, str]] | None = None):
         self.pairs = pairs or ARBA_PAIRS
@@ -732,7 +732,7 @@ class M10_Arba(Module):
 # M11 — Trace (digital trace sessions)
 # ---------------------------------------------------------------------------
 class M11_Trace(Module):
-    name = "M11 Цифровой след"
+    name = "М11 След алгоритма"
 
     def __init__(self):
         self.sessions: dict[str, TraceSession] = {}
@@ -791,7 +791,7 @@ class M11_Trace(Module):
 # M12 — Scalping / Plan (large order near the plan)
 # ---------------------------------------------------------------------------
 class M12_Scalping(Module):
-    name = "M12 Скальпинг (план)"
+    name = "М12 Скальпинг"
 
     def evaluate(self, states, ctx):
         out = []
@@ -816,7 +816,7 @@ class M12_Scalping(Module):
 # M13 — Volatility (ATR-style on last 5 candles)
 # ---------------------------------------------------------------------------
 class M13_Volatility(Module):
-    name = "M13 Движок"
+    name = "М13 Раскачка"
 
     def evaluate(self, states, ctx):
         out = []
