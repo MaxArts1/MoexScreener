@@ -9,6 +9,11 @@ Additions over v3:
 
 Data source: MOEX ISS REST (boardprice + candles), same as v3 --rest mode.
 WebSocket is not required for the new modules.
+
+HTML dashboard: the screener writes data/screener.json on every cycle.
+Open dashboard.html in a browser to watch the screener live (the page
+polls the JSON file via fetch() every 5s — run it from the same folder
+or serve it with `python -m http.server`).
 """
 
 import asyncio
@@ -20,7 +25,7 @@ import sys
 import time
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 # Force UTF-8 stdout
@@ -159,6 +164,8 @@ class TickerState:
     trade_volumes: list = field(default_factory=list)
     trade_prices: list = field(default_factory=list)
     trade_gaps: list = field(default_factory=list)
+    strike_gaps: list = field(default_factory=list)    # inter-strike gaps (10-60s robots)
+    last_strikes: dict = field(default_factory=dict)  # {price_level: [ts1, ts2, ...]}
     history: list = field(default_factory=list)  # (ts, last, vol)
 
     def push_candle(self, ts, last, vol):
@@ -453,33 +460,38 @@ class M07_IcebergSingle(Module):
 
 # ---------------------------------------------------------------------------
 # M08 — Robots (with session tracking, DB, and countdown)
+# Robots repeat minimal-size orders every 10–60 sec near the spread
 # ---------------------------------------------------------------------------
+ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "10"))
+ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "60"))
+ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "3"))
+ROBOT_QTY_MAX_FACTOR = float(os.getenv("ROBOT_QTY_MAX_FACTOR", "2.0"))  # strike qty <= factor x ticker median
+
 @dataclass
 class RobotSession:
-    """Tracks one robot activity session."""
+    """Tracks one robot activity session (periodic minimal strikes)."""
     ticker: str
     detected_at: float          # time when robot first detected
-    cv: float                   # coefficient of variation
-    start_price: float
-    start_volume: float
+    strike_price: float        # price level the robot works on
+    strike_interval: float = 0.0    # median interval between strikes (sec)
+    strikes: int = 0          # number of strikes observed
+    start_price: float = 0.0
+    start_volume: float = 0.0
     last_update: float = 0.0
     last_price: float = 0.0
     last_volume: float = 0.0
     active: bool = True
     next_strike_estimate: float = 0.0  # seconds until next expected strike
+    _strike_ts: list = field(default_factory=list)
 
-    def record(self, ts: float, price: float, vol: float, cv: float):
+    def record(self, ts: float, price: float, vol: float):
         self.last_update = ts
         self.last_price = price
         self.last_volume = vol
-        self.cv = cv
-
-    def compute_next_strike(self) -> float:
-        """Estimate seconds until next robot strike based on observed cadence."""
-        if len(self.gaps) < 2:
-            return 0.0
-        median_gap = statistics.median(self.gaps)
-        return max(0.0, median_gap)
+        self.strikes += 1
+        self._strike_ts.append(ts)
+        if len(self._strike_ts) > 20:
+            self._strike_ts.pop(0)
 
     @property
     def price_move(self) -> float:
@@ -491,19 +503,31 @@ class RobotSession:
     def duration_sec(self) -> float:
         return max(0.0, self.last_update - self.detected_at)
 
+    def compute_next_strike(self) -> float:
+        """Estimate seconds until next robot strike based on observed cadence."""
+        if len(self._strike_ts) < 2:
+            return 0.0
+        gaps = [self._strike_ts[i+1] - self._strike_ts[i] for i in range(len(self._strike_ts)-1)]
+        median_gap = statistics.median(gaps)
+        elapsed = time.time() - self.last_update
+        return max(0.0, median_gap - elapsed)
+
     def to_dict(self) -> dict:
         return {
             "ticker": self.ticker,
             "detected_at": self.detected_at,
             "last_update": self.last_update,
             "duration_sec": self.duration_sec,
+            "strike_price": self.strike_price,
+            "strike_interval": self.strike_interval,
+            "strikes": self.strikes,
             "start_price": self.start_price,
+            "start_volume": self.start_volume,
             "last_price": self.last_price,
             "price_move_pct": round(self.price_move * 100, 4),
-            "start_volume": self.start_volume,
             "last_volume": self.last_volume,
-            "cv": round(self.cv, 4),
             "active": self.active,
+            "next_strike_estimate": self.compute_next_strike(),
         }
 
 
@@ -526,15 +550,17 @@ class M08_Robots(Module):
                 with open(self._db_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 for r in data.get("robots", []):
-                    key = f"{r['ticker']}"
+                    key = f"{r['ticker']}@{r.get('strike_price', 0)}"
                     if key not in self.sessions:
                         s = RobotSession(
                             ticker=r["ticker"],
                             detected_at=r.get("detected_at", 0),
-                            cv=r.get("cv", 0),
+                            strike_price=r.get("strike_price", 0),
                             start_price=r.get("start_price", 0),
                             start_volume=r.get("start_volume", 0),
                         )
+                        s.strike_interval = r.get("strike_interval", 0)
+                        s.strikes = r.get("strikes", 0)
                         s.active = r.get("active", False)
                         s.last_price = r.get("last_price", 0)
                         s.last_volume = r.get("last_volume", 0)
@@ -591,78 +617,113 @@ class M08_Robots(Module):
         ts_now = ctx.get("ts", time.time())
         new_alerts = []
 
-        # M08 detects robots via VOLUME ANOMALY, not synthetic tick-CV:
-        #   robot pattern = last poll volume >= ROBOT_VOL_RATIO x recent average
-        #                   AND price barely moved (abs change <= ROBOT_PRICE_TOL)
-        # This works with REST (one tick/poll) and stays accurate with real
-        # WebSocket trades (push_trade still records them).
-        vol_ratio = _env_float("ROBOT_VOL_RATIO", 2.0)
-        price_tol = _env_float("ROBOT_PRICE_TOLERANCE", 0.002)  # 0.2%
-
+        # Robot detection uses REAL trade data from trades.json (MOEX ISS REST).
+        # Pattern: same price struck ROBOT_MIN_REPEATS+ times
+        # with inter-strike intervals in [ROBOT_STRIKE_MIN_SEC, ROBOT_STRIKE_MAX_SEC],
+        # minimal QTY (<= ROBOT_QTY_MAX_FACTOR x median), within spread zone.
         for t, s in states.items():
-            h = s.history
-            if len(h) < 6:
+            # Use real trade timestamps (from trades.json) if available
+            trade_times = s.trade_times
+            trade_prices = s.trade_prices
+            if len(trade_times) < ROBOT_MIN_REPEATS + 1:
                 continue
 
-            # recent volume window (last 6 polls)
-            recent = h[-6:]
-            prev_vols = [v for _, _, v in recent[:-1] if v]
-            last_vol = recent[-1][2] or 0
-            if not prev_vols or last_vol <= 0:
-                continue
-            avg_prev = statistics.fmean(prev_vols)
-            if avg_prev <= 0:
+            # Build (ts, price) pairs from real trades
+            trade_pairs = list(zip(trade_times, trade_prices))
+            if len(trade_pairs) < ROBOT_MIN_REPEATS:
                 continue
 
-            vol_x = last_vol / avg_prev
+            # Group by price level
+            price_hits: dict[float, list] = {}
+            for ts_, price in trade_pairs:
+                if price is None:
+                    continue
+                price_hits.setdefault(price, []).append((ts_, price))
 
-            # price stability: compare last two prices
-            prices = [p for _, p, _ in recent[-3:] if p]
-            if len(prices) < 2 or prices[-2] == 0:
-                continue
-            price_move = abs(prices[-1] - prices[-2]) / prices[-2]
+            for price, hits in price_hits.items():
+                if len(hits) < ROBOT_MIN_REPEATS:
+                    continue
+                ts_list = sorted(set(h[0] for h in hits))
+                if len(ts_list) < ROBOT_MIN_REPEATS:
+                    continue
+                gaps = [ts_list[i+1] - ts_list[i] for i in range(len(ts_list)-1)]
+                if not gaps:
+                    continue
+                med_gap = statistics.median(gaps)
+                if not (ROBOT_STRIKE_MIN_SEC <= med_gap <= ROBOT_STRIKE_MAX_SEC):
+                    continue
+                # QTY check: strikes should be small
+                qtys = [s.trade_volumes[i] for i in range(len(s.trade_volumes))
+                        if s.trade_prices[i] == price and s.trade_volumes[i] > 0]
+                if not qtys:
+                    continue
+                med_qty = statistics.median(qtys)
+                all_vols = [v for v in s.trade_volumes if v > 0]
+                ticker_med = statistics.median(all_vols) if all_vols else 0
+                max_allowed = ticker_med * ROBOT_QTY_MAX_FACTOR if ticker_med > 0 else 100
+                if med_qty > max_allowed:
+                    continue
+                # Spread zone check: price within [bid-2tick, ask+2tick]
+                if s.bid is not None and s.ask is not None:
+                    tick = max(0.001, (s.ask - s.bid) / 2.0)
+                    lo = s.bid - 2 * tick
+                    hi = s.ask + 2 * tick
+                    if not (lo <= price <= hi):
+                        continue
 
-            key = t
-            sess = self.sessions.get(key)
-            if vol_x >= vol_ratio and price_move <= price_tol:
-                # Robot active / continuing
+                # Robot confirmed — create/update session
+                key = f"{t}@{price}"
+                sess = self.sessions.get(key)
                 is_new = False
                 if sess is None or not sess.active:
                     sess = RobotSession(
                         ticker=t,
-                        detected_at=ts_now,
-                        cv=round(vol_x, 2),  # reuse cv slot as volume multiple
-                        start_price=prices[0] if prices else 0.0,
-                        start_volume=int(avg_prev),
+                        detected_at=ts_list[0],
+                        strike_price=price,
+                        start_price=price,
+                        start_volume=int(med_qty),
                     )
                     self.sessions[key] = sess
                     is_new = True
 
-                sess.last_update = ts_now
-                sess.last_price = prices[-1]
-                sess.last_volume = int(last_vol)
+                sess._strike_ts = ts_list[-20:]
+                sess.strikes = len(ts_list)
+                sess.strike_interval = round(med_gap, 1)
+                sess.last_update = ts_list[-1]
+                sess.last_price = price
+                sess.last_volume = int(med_qty)
                 sess.active = True
-                sess.next_strike_estimate = 0.0  # unknown cadence in REST
+                sess.next_strike_estimate = sess.compute_next_strike()
 
                 text = (
-                    f"x{vol_x:.1f} объём ({int(last_vol)}, ср {int(avg_prev)}), "
-                    f"цена {prices[-1]:.4f} (+{price_move*100:.3f}%), "
-                    f"{int(ts_now - sess.detected_at)}s в работе"
+                    f"{len(ts_list)} ударов @ {price:.2f}, "
+                    f"каждые ~{sess.strike_interval:.0f}s, "
+                    f"QTY={int(med_qty)}, в работе {int(sess.duration_sec)}s"
                 )
                 out.append(Signal(
-                    self.name, t, round(vol_x, 1),
+                    self.name, t, round(med_gap, 1),
                     text,
-                    severity=min(5, int(vol_x)),
+                    severity=min(5, int(med_gap / 15) + 2),
                 ))
                 if is_new:
-                    new_alerts.append(t)
+                    new_alerts.append(key)
                     self._maybe_alert_sound(t, is_new=True)
-            else:
-                # Pattern broken — close session, save to DB
-                if sess and sess.active:
-                    sess.active = False
-                    sess.end_time = ts_now
-                    sess.end_price = prices[-1]
+
+        # Close sessions for prices no longer observed in recent trades
+        for key, sess in list(self.sessions.items()):
+            t = key.split("@")[0]
+            if t not in states:
+                continue
+            s = states[t]
+            # Check if this price was in the last 50 real trades
+            recent_prices = set(s.trade_prices[-50:]) if s.trade_prices else set()
+            try:
+                p_val = float(key.split("@", 1)[1])
+            except (ValueError, IndexError):
+                continue
+            if p_val not in recent_prices and sess.active:
+                sess.active = False
+                sess.next_strike_estimate = 0.0
 
         # Persist DB every cycle (throttled)
         if new_alerts:
@@ -1043,6 +1104,49 @@ def _fetch_boardprice_rest(ticker: str, depth: int = 5) -> dict:
     }
 
 
+def _fetch_trades_rest(ticker: str, limit: int = 50) -> list[dict]:
+    """Fetch last N trades from MOEX ISS REST (guest access, trades.json).
+    Returns list of {ts, price, qty, buy_sell} sorted oldest-first.
+    """
+    url = (
+        f"{BASE}/engines/stock/markets/shares/boards/TQBR"
+        f"/securities/{ticker}/trades.json"
+        f"?iss.meta=off&iss.limit={limit}&iss.sort=-TRADETIME"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "moex-screener/3.1"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read().decode())
+    except Exception:
+        return []
+
+    rows = (payload.get("trades") or {}).get("data") or []
+    cols = (payload.get("trades") or {}).get("columns") or []
+    out = []
+    for row in rows:
+        d = dict(zip(cols, row))
+        try:
+            # SYSTIME = "YYYY-MM-DD HH:MM:SS" (MSK)
+            systime_str = d.get("SYSTIME", "")
+            if systime_str:
+                from datetime import datetime as _dt
+                # SYSTIME is MSK (UTC+3); convert to UTC epoch
+                msk_tz = timezone(timedelta(hours=3))
+                dt = _dt.strptime(systime_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=msk_tz)
+                ts = dt.timestamp()
+            else:
+                ts = time.time()
+            price = float(d.get("PRICE", 0))
+            qty = float(d.get("QUANTITY", 0))
+            bs = d.get("BUYSELL", "")
+            out.append({"ts": ts, "price": price, "qty": qty, "buy_sell": bs})
+        except (ValueError, TypeError):
+            continue
+    # trades.json returns newest-first; reverse to oldest-first
+    out.reverse()
+    return out
+
+
 def _fetch_oi_rest(ticker: str) -> Optional[float]:
     url = (
         f"{BASE}/engines/stock/markets/futures/boards/FUTURE"
@@ -1138,6 +1242,11 @@ class ScreenerEngine:
                 # Simulate a trade for M08/M12 (REST only)
                 st.push_trade(st.last, qty or 0.0, ts)
 
+            # M08: fetch real trades (every cycle, 50 trades per ticker)
+            real_trades = _fetch_trades_rest(t, limit=50)
+            for rt in real_trades:
+                st.push_trade(rt["price"], rt["qty"], rt["ts"])
+
         # M10 Arba: fetch paired tickers and update spread
         for a, b in self.arba_pairs:
             da = _fetch_boardprice_rest(a)
@@ -1197,6 +1306,48 @@ class ScreenerEngine:
             print("\n  (no signals - quiet market)")
         print()
 
+    def _write_snapshot(self, sigs: list[Signal]):
+        """Write data/screener.json for the HTML dashboard."""
+        try:
+            import os as _os
+            snap_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "data")
+            _os.makedirs(snap_dir, exist_ok=True)
+            snap = {
+                "ts": time.time(),
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "signals": [
+                    {"module": s.module, "ticker": s.ticker,
+                     "value": s.value, "text": s.text, "severity": s.severity}
+                    for s in sigs[:80]
+                ],
+                "states": {},
+            }
+            for t, st in self.states.items():
+                snap["states"][t] = {
+                    "last": st.last, "bid": st.bid, "ask": st.ask,
+                    "day_volume": st.day_volume, "day_value": st.day_value,
+                    "updates": st.updates,
+                }
+            # Arba spreads (from M10 pair_states)
+            snap["arba"] = []
+            for key, ps in getattr(self.arba_module, "pair_states", {}).items():
+                snap["arba"].append({
+                    "pair": key,
+                    "pair_a": ps.a,
+                    "pair_b": ps.b,
+                    "spread": ps.spread_history[-1][1] if ps.spread_history else None,
+                    "fair": ps.fair,
+                    "z_score": ps.z_score,
+                })
+            # Robots (from M08) — include BOTH active and recently-closed sessions
+            robots_mod = next((m for m in self.modules if m.name.startswith("М8")), None)
+            if robots_mod and hasattr(robots_mod, "sessions"):
+                snap["robots"] = [s.to_dict() for s in robots_mod.sessions.values()]
+            with open(_os.path.join(snap_dir, "screener.json"), "w", encoding="utf-8") as f:
+                json.dump(snap, f, ensure_ascii=False, indent=1)
+        except Exception as e:
+            print(f"[snap] {e}")
+
     async def run(self, cycles: int | None = None, use_ws: bool = False):
         mode = "WebSocket" if use_ws else "REST fallback"
         print(f"MOEX Screener v3.1 — {len(self.equities)} equities + "
@@ -1210,6 +1361,7 @@ class ScreenerEngine:
             self._poll_rest_once()
             sigs = self.collect_signals()
             self.render(sigs)
+            self._write_snapshot(sigs)
             i += 1
             if cycles and i >= cycles:
                 break
@@ -1220,16 +1372,56 @@ class ScreenerEngine:
         print("\nStopped.")
 
 # ---------------------------------------------------------------------------
+# HTTP server for dashboard (optional: --http flag)
+# ---------------------------------------------------------------------------
+def start_http_server(directory: str, port: int = 8080):
+    """Serve the project directory over HTTP so dashboard.html can fetch data/screener.json.
+    Runs in a daemon thread; the server lives for the lifetime of the process."""
+    import http.server
+    import socketserver
+    import functools
+    import threading
+
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler,
+        directory=directory,
+    )
+
+    # Allow reuse of the port and run requests in threads so a slow
+    # REST poll cycle never blocks the HTTP listener.
+    class ReuseTCPServer(socketserver.ThreadingTCPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
+    httpd = ReuseTCPServer(("0.0.0.0", port), handler)
+    t = threading.Thread(target=httpd.serve_forever, daemon=True)
+    t.start()
+    print(f"[http] Dashboard: http://localhost:{port}/dashboard.html")
+    return httpd
+
+
+# ---------------------------------------------------------------------------
 # Entry
 # ---------------------------------------------------------------------------
 async def main():
     cycles: int | None = None
     args = sys.argv[1:]
+    use_http = False
     if "--rest" in args:
         args.remove("--rest")
+    if "--http" in args:
+        args.remove("--http")
+        use_http = True
     if args and args[0].isdigit():
         cycles = int(args[0])
     engine = ScreenerEngine()
+
+    if use_http:
+        import os as _os
+        proj_dir = _os.path.dirname(_os.path.abspath(__file__))
+        _os.makedirs(_os.path.join(proj_dir, "data"), exist_ok=True)
+        start_http_server(proj_dir)
+
     await engine.run(cycles=cycles, use_ws=False)
 
 

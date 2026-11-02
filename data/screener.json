@@ -1,0 +1,154 @@
+{
+ "ts": 1793636734.5482228,
+ "time": "2026-11-02 19:25:34",
+ "signals": [],
+ "states": {
+  "SBER": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "GAZP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "LKOH": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "VTBR": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "MGNT": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "ROSN": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "GMKN": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "TATN": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "SNGS": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "PLZT": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "SBERP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "GAZPP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "VTBRP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "TATNP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  }
+ },
+ "arba": [
+  {
+   "pair": "SBER/SBERP",
+   "pair_a": "SBER",
+   "pair_b": "SBERP",
+   "spread": null,
+   "fair": null,
+   "z_score": null
+  },
+  {
+   "pair": "GAZP/GAZPP",
+   "pair_a": "GAZP",
+   "pair_b": "GAZPP",
+   "spread": null,
+   "fair": null,
+   "z_score": null
+  },
+  {
+   "pair": "VTBR/VTBRP",
+   "pair_a": "VTBR",
+   "pair_b": "VTBRP",
+   "spread": null,
+   "fair": null,
+   "z_score": null
+  },
+  {
+   "pair": "TATN/TATNP",
+   "pair_a": "TATN",
+   "pair_b": "TATNP",
+   "spread": null,
+   "fair": null,
+   "z_score": null
+  }
+ ],
+ "robots": []
+}

@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOEX Screener — Live Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --dim: #8b949e;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --orange: #f0883e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+}
+header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+header h1 { font-size: 18px; font-weight: 600; }
+header .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  animation: pulse 2s infinite;
+}
+.dot.live { background: var(--green); }
+.dot.stale { background: var(--yellow); animation: none; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* Signal summary bar */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.summary-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.summary-item .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-item .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.summary-item .value.green { color: var(--green); }
+.summary-item .value.red { color: var(--red); }
+.summary-item .value.yellow { color: var(--yellow); }
+.summary-item .value.blue { color: var(--blue); }
+
+/* Grid of modules */
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 16px;
+}
+.module-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.module-card.has-signals { border-color: var(--yellow); }
+.module-card.hot { border-color: var(--red); }
+.module-header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+.module-header h3 { font-size: 14px; font-weight: 600; }
+.module-header .count {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--border);
+  color: var(--dim);
+}
+.module-header .count.active { background: var(--yellow); color: #000; }
+.module-header .count.hot { background: var(--red); color: #fff; }
+.module-body { padding: 0; }
+.module-body.collapsed { display: none; }
+.signal-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.signal-row:last-child { border-bottom: none; }
+.signal-ticker {
+  font-weight: 700;
+  min-width: 56px;
+  font-family: 'Consolas', monospace;
+}
+.signal-text { flex: 1; line-height: 1.4; }
+.signal-sev {
+  font-size: 11px;
+  color: var(--dim);
+  min-width: 24px;
+  text-align: right;
+}
+.sig-sev-5 .signal-ticker { color: var(--red); }
+.sig-sev-4 .signal-ticker { color: var(--orange); }
+.sig-sev-3 .signal-ticker { color: var(--yellow); }
+.sig-sev-2 .signal-ticker { color: var(--blue); }
+.sig-sev-1 .signal-ticker { color: var(--dim); }
+
+/* No signals */
+.no-signals {
+  padding: 20px;
+  text-align: center;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+/* Arba section */
+.arba-pair {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.arba-pair:last-child { border-bottom: none; }
+.arba-pair .pair-name { font-family: 'Consolas', monospace; font-weight: 600; font-size: 13px; min-width: 120px; }
+.arba-pair .pair-spread { font-size: 14px; font-weight: 700; }
+.arba-pair .pair-spread.negative { color: var(--red); }
+.arba-pair .pair-spread.positive { color: var(--green); }
+.arba-pair .pair-z { font-size: 11px; color: var(--dim); }
+
+/* Robots section */
+.robot-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 80px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.robot-row:last-child { border-bottom: none; }
+.robot-row.active { border-left: 3px solid var(--green); }
+.robot-row.closed { opacity: 0.55; border-left: 3px solid var(--border); }
+.robot-row .ticker { font-family: 'Consolas', monospace; font-weight: 700; color: var(--blue); }
+.robot-row.closed .ticker { color: var(--dim); }
+.robot-row .price { font-family: 'Consolas', monospace; }
+.robot-row .countdown {
+  font-family: 'Consolas', monospace;
+  font-weight: 700;
+  color: var(--yellow);
+  text-align: center;
+}
+.robot-row .interval { font-size: 11px; color: var(--dim); text-align: right; }
+.badge-on {
+  display: inline-block;
+  background: var(--green);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.badge-off {
+  display: inline-block;
+  background: var(--border);
+  color: var(--dim);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* Price grid */
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.price-cell {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.price-cell .ticker { font-weight: 700; font-size: 13px; font-family: 'Consolas', monospace; }
+.price-cell .last { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+.price-cell .bid-ask { font-size: 11px; color: var(--dim); font-family: 'Consolas', monospace; }
+.price-cell .day-vol { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.price-cell.up .last { color: var(--green); }
+.price-cell.down .last { color: var(--red); }
+
+/* Timestamp */
+.ts { font-size: 12px; color: var(--dim); margin-top: 16px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 MOEX Screener v3.1</h1>
+  <div class="status">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText">Подключение…</span>
+    <span id="lastUpdate"></span>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Summary bar -->
+  <div class="summary-bar" id="summaryBar">
+    <div class="summary-item"><div class="label">Сигналов</div><div class="value" id="sigCount">—</div></div>
+    <div class="summary-item"><div class="label">Критичных</div><div class="value red" id="critCount">—</div></div>
+    <div class="summary-item"><div class="label">Роботов</div><div class="value blue" id="robotCount">—</div></div>
+    <div class="summary-item"><div class="label">Arba (отр. спред)</div><div class="value" id="arbaCount">—</div></div>
+  </div>
+
+  <!-- Robots (M08) — special section -->
+  <div class="module-card" id="robotsCard" style="margin-bottom:16px;">
+    <div class="module-header" onclick="toggleCard('robots')">
+      <h3>🤖 M08 — Роботы (радар)</h3>
+      <span class="count" id="robotCountBadge">0</span>
+    </div>
+    <div class="module-body" id="robotsBody">
+      <div class="no-signals">Роботы не обнаружены</div>
+    </div>
+  </div>
+
+  <!-- Arba (M10) -->
+  <div class="module-card" id="arbaCard" style="margin-bottom:16px;">
+    <div class="module-header" onclick="toggleCard('arba')">
+      <h3>⚡ M10 — Арбитраж</h3>
+      <span class="count" id="arbaCountBadge">0</span>
+    </div>
+    <div class="module-body" id="arbaBody">
+      <div class="no-signals">Нет сигналов</div>
+    </div>
+  </div>
+
+  <!-- Price grid -->
+  <div class="module-card" style="margin-bottom:16px;">
+    <div class="module-header" onclick="toggleCard('prices')">
+      <h3>💹 Текущие цены</h3>
+    </div>
+    <div class="module-body" id="pricesBody">
+      <div class="price-grid" id="priceGrid">
+        <div class="no-signals">Загрузка…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All module signals -->
+  <div class="modules-grid" id="modulesGrid"></div>
+
+  <div class="ts" id="footerTs">—</div>
+</div>
+
+<script>
+const MODULES = [
+  "М1 Кто торгуется", "М2 Скачок цены", "М3 Всплеск объёма",
+  "М4 Мегасделки", "М5 Толстые уровни", "М6 Айсберг-радар",
+  "М7 Айсберг (по одному)", "М8 Роботы (радар)", "М9 Открытый интерес",
+  "М10 Арбитраж", "М11 След алгоритма", "М12 Скальпинг",
+  "М13 Раскачка", "М14 Отрыв от средней", "М15 Крупные деньги", "М16 Валюты",
+];
+const COLLAPSED = new Set();
+let lastTs = 0;
+
+function toggleCard(id) {
+  const body = document.getElementById(id + "Body");
+  if (!body) return;
+  if (body.classList.contains("collapsed")) {
+    body.classList.remove("collapsed");
+    COLLAPSED.delete(id);
+  } else {
+    body.classList.add("collapsed");
+    COLLAPSED.add(id);
+  }
+}
+
+function sevClass(sev) { return "sig-sev-" + Math.max(1, Math.min(5, sev)); }
+function fmtNum(n) {
+  if (n == null) return "—";
+  if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1) + " млрд";
+  if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + " млн";
+  if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(1) + " тыс.";
+  return String(n);
+}
+
+function render(data) {
+  // Status
+  const now = Date.now();
+  const fresh = (now - data.ts * 1000) < 15000;
+  document.getElementById("statusDot").className = "dot " + (fresh ? "live" : "stale");
+  document.getElementById("statusText").textContent = fresh ? "LIVE" : "СТАРОЕ ДАННЫЕ";
+  document.getElementById("lastUpdate").textContent = data.time || "";
+  document.getElementById("footerTs").textContent = "Обновлено: " + data.time + " · автообновление каждые 5 с";
+
+  // Signals by module
+  const byModule = {};
+  for (const s of data.signals) {
+    if (!byModule[s.module]) byModule[s.module] = [];
+    byModule[s.module].push(s);
+  }
+
+  // Summary
+  document.getElementById("sigCount").textContent = data.signals.length;
+  document.getElementById("critCount").textContent = data.signals.filter(s => s.severity >= 4).length;
+
+  // Robots — show active (green) and recently-closed (grey/red)
+  const robots = data.robots || [];
+  const activeRobots = robots.filter(r => r.active);
+  const closedRobots = robots.filter(r => !r.active);
+  document.getElementById("robotCount").textContent = activeRobots.length;
+  document.getElementById("robotCountBadge").textContent = activeRobots.length;
+  document.getElementById("robotCountBadge").className = "count " + (activeRobots.length ? "active" : "");
+  const robotsCard = document.getElementById("robotsCard");
+  robotsCard.classList.toggle("has-signals", activeRobots.length > 0);
+
+  let robotHtml = "";
+  for (const r of activeRobots) {
+    const cd = r.next_strike_estimate > 0 ? Math.ceil(r.next_strike_estimate) + "с" : "—";
+    const interval = r.strike_interval ? "~" + Math.round(r.strike_interval) + "с" : "—";
+    robotHtml += `<div class="robot-row active">
+      <span class="ticker">${r.ticker}</span>
+      <span class="price">@ ${r.strike_price} · QTY ${r.last_volume} · ${r.strikes} уд.</span>
+      <span class="countdown">${cd}</span>
+      <span class="interval">каждые ${interval} · <span class="badge-on">ACTIVE</span></span>
+    </div>`;
+  }
+  for (const r of closedRobots) {
+    const interval = r.strike_interval ? "~" + Math.round(r.strike_interval) + "с" : "—";
+    const dur = Math.round(r.duration_sec || 0);
+    robotHtml += `<div class="robot-row closed">
+      <span class="ticker">${r.ticker}</span>
+      <span class="price">@ ${r.strike_price} · QTY ${r.last_volume} · ${r.strikes} уд.</span>
+      <span class="countdown">—</span>
+      <span class="interval">каждые ${interval} · ${dur}с · <span class="badge-off">ОТКЛ</span></span>
+    </div>`;
+  }
+  document.getElementById("robotsBody").innerHTML = robotHtml || '<div class="no-signals">Роботы не обнаружены</div>';
+
+  // Arba
+  const arba = data.arba || [];
+  document.getElementById("arbaCount").textContent = arba.filter(a => a.spread < 0).length;
+  document.getElementById("arbaCountBadge").textContent = arba.length;
+  if (arba.length) {
+    let html = "";
+    for (const a of arba) {
+      const cls = a.spread < 0 ? "negative" : "positive";
+      const z = a.z_score != null ? " z=" + a.z_score.toFixed(1) : "";
+      html += `<div class="arba-pair">
+        <span class="pair-name">${a.pair_a}/${a.pair_b}</span>
+        <span class="pair-spread ${cls}">${a.spread.toFixed(4)}</span>
+        <span class="pair-z">${z}</span>
+      </div>`;
+    }
+    document.getElementById("arbaBody").innerHTML = html;
+  }
+
+  // Price grid
+  const states = data.states || {};
+  const tickers = Object.keys(states).filter(t => !/^(SBERP|GAZPP|VTBRP|TATNP|SIU6|BRU6|GDH6|MEU6)$/.test(t));
+  let priceHtml = "";
+  for (const t of tickers) {
+    const st = states[t];
+    if (!st.last) continue;
+    const bid = st.bid != null ? st.bid.toFixed(2) : "—";
+    const ask = st.ask != null ? st.ask.toFixed(2) : "—";
+    const dayVol = st.day_volume ? fmtNum(st.day_volume) + " шт" : "—";
+    const up = st.last >= 0; // we don't track open/prev here, use class neutrally
+    priceHtml += `<div class="price-cell">
+      <div class="ticker">${t}</div>
+      <div class="last">${st.last.toFixed(2)}</div>
+      <div class="bid-ask">${bid} / ${ask}</div>
+      <div class="day-vol">${dayVol}</div>
+    </div>`;
+  }
+  document.getElementById("priceGrid").innerHTML = priceHtml || '<div class="no-signals">—</div>';
+
+  // Module cards
+  const grid = document.getElementById("modulesGrid");
+  let gridHtml = "";
+  for (const mod of MODULES) {
+    const signals = byModule[mod] || [];
+    const isRobots = mod.includes("M08");
+    const isArba = mod.includes("M10");
+    if (isRobots || isArba) continue; // shown in special sections above
+    if (!signals.length) continue;
+    const maxSev = Math.max(...signals.map(s => s.severity));
+    const cardClass = maxSev >= 4 ? "hot" : (maxSev >= 3 ? "has-signals" : "");
+    const badgeClass = maxSev >= 4 ? "hot" : (maxSev >= 3 ? "active" : "");
+    const id = "mod-" + mod.replace(/\W/g, "");
+    const collapsed = COLLAPSED.has(id) ? "collapsed" : "";
+    let bodyHtml = "";
+    for (const s of signals.slice(0, 8)) {
+      bodyHtml += `<div class="signal-row ${sevClass(s.severity)}">
+        <span class="signal-ticker">${s.ticker}</span>
+        <span class="signal-text">${s.text}</span>
+        <span class="signal-sev">${s.severity}</span>
+      </div>`;
+    }
+    gridHtml += `<div class="module-card ${cardClass}">
+      <div class="module-header" onclick="toggleCard('${id}')">
+        <h3>${mod}</h3>
+        <span class="count ${badgeClass}">${signals.length}</span>
+      </div>
+      <div class="module-body ${collapsed}" id="${id}Body">${bodyHtml}</div>
+    </div>`;
+  }
+  grid.innerHTML = gridHtml;
+}
+
+async function poll() {
+  try {
+    const url = "./data/screener.json?t=" + Date.now();
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    if (data.ts !== lastTs) {
+      lastTs = data.ts;
+      render(data);
+    }
+  } catch (e) {
+    document.getElementById("statusDot").className = "dot stale";
+    document.getElementById("statusText").textContent = "Нет данных (" + e.message + ")";
+  }
+}
+
+// Poll every 5s
+async function poll() {
+  try {
+    const url = "./data/screener.json?t=" + Date.now();
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    if (data.ts !== lastTs) {
+      lastTs = data.ts;
+      render(data);
+    }
+  } catch (e) {
+    // Fallback: try loading via file:// (user must drag&drop JSON or open via http)
+    document.getElementById("statusDot").className = "dot stale";
+    document.getElementById("statusText").textContent = "Нет доступа к data/screener.json";
+  }
+}
+poll();
+setInterval(poll, 5000);
+
+// Drag & drop: open data/screener.json directly when served via file://
+document.body.addEventListener("dragover", e => e.preventDefault());
+document.body.addEventListener("drop", e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      lastTs = data.ts;
+      render(data);
+      document.getElementById("statusDot").className = "dot live";
+      document.getElementById("statusText").textContent = "FILE MODE (drag&drop)";
+    } catch (err) {
+      alert("Не удалось распарсить JSON: " + err.message);
+    }
+  };
+  reader.readAsText(f, "utf-8");
+});
+
+// If opened via file://, hint the user how to get live data
+if (location.protocol === "file:") {
+  const hint = document.getElementById("statusText");
+  hint.textContent = "FILE MODE — перетащите сюда data/screener.json или откройте через http://localhost:8080";
+}
+
+// Countdown refresh for robots every second
+setInterval(() => {
+  // Robots with next_strike_estimate get their countdown decremented locally
+  document.querySelectorAll(".robot-row .countdown").forEach(el => {
+    const cur = parseInt(el.textContent);
+    if (!isNaN(cur) && cur > 1) el.textContent = (cur - 1) + "с";
+  });
+}, 1000);
+</script>
+</body>
+</html>
