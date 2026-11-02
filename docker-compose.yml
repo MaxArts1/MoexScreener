@@ -1,0 +1,28 @@
+# MOEX Screener v3.1 — Docker Compose
+# Usage: docker compose up --build
+#
+# Mounts:
+#   ./robot_db  →  /app/robot_db  (persist robot sessions between runs)
+#   ./.env      →  /app/.env      (optional: real tickers, MOEX key, etc.)
+
+services:
+  screener:
+    build: .
+    image: moex-screener:latest
+    container_name: moex-screener
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Volgograd
+      - RENDER_SEC=5
+      - SOUND_ALERT_ENABLED=false   # enable sound in container (needs /dev/tty or pulse)
+      # Override any of these in .env on the host:
+      # EQUITIES, FUTURES, ARBA_PAIRS, ICEBERG_*
+    volumes:
+      - ./robot_db:/app/robot_db
+      - ./.env:/app/.env:ro
+    # Uncomment to tail the log:
+    # logging:
+    #   driver: json-file
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "query": "MOEX screener: guest WebSocket limitations",
+      "answer": "guest/guest only gets MXSE.candles; book/trades/openInterest require a MOEX license key. REST boardprice.json (depth=5) works without auth.",
+      "created_at": "2026-11-01T14:30:00Z",
+      "id": "mem-001"
+    },
+    [
+      {
+        "query": "M08 robot detection in REST mode",
+        "answer": "REST polling injects one synthetic trade per poll, so trade_gaps = poll interval (5s) + jitter. CV threshold 0.25 must be relaxed or data comes from candles begin/end for true inter-trade gaps.",
+        "created_at": "2026-11-02T12:00:00Z",
+        "id": "mem-002"
+      }
+    ]
+  ]
+}

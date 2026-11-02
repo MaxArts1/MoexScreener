@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .env
+robot_db/
+.m7/cycles/*.json.tmp
