@@ -1,4 +1,18 @@
 {
-  "updated_at": 1793611644.1653235,
-  "robots": []
+  "updated_at": 1793619422.132046,
+  "robots": [
+    {
+      "ticker": "VTBR",
+      "detected_at": 1793619422.1202872,
+      "last_update": 1793619422.1202872,
+      "duration_sec": 0.0,
+      "start_price": 55.51,
+      "last_price": 55.575,
+      "price_move_pct": 0.1171,
+      "start_volume": 97,
+      "last_volume": 2458,
+      "cv": 25.13,
+      "active": true
+    }
+  ]
 }

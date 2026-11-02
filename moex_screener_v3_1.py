@@ -158,6 +158,7 @@ class TickerState:
     trade_times: list = field(default_factory=list)
     trade_volumes: list = field(default_factory=list)
     trade_prices: list = field(default_factory=list)
+    trade_gaps: list = field(default_factory=list)
     history: list = field(default_factory=list)  # (ts, last, vol)
 
     def push_candle(self, ts, last, vol):
@@ -175,10 +176,14 @@ class TickerState:
         if vol:
             self.trade_volumes.append(vol)
             self.trade_prices.append(price)
+        # Track inter-trade gaps for M08 robot CV
+        if len(self.trade_times) >= 2:
+            self.trade_gaps.append(ts - self.trade_times[-2])
         if len(self.trade_times) > 200:
             self.trade_times.pop(0)
             self.trade_volumes.pop(0)
             self.trade_prices.pop(0)
+            self.trade_gaps.pop(0)
         self.updates += 1
 
     def set_book(self, bid, ask, bid_sizes, ask_sizes):
@@ -547,10 +552,12 @@ class M08_Robots(Module):
                 "updated_at": time.time(),
                 "robots": [s.to_dict() for s in self.sessions.values()],
             }
-            tmp = self._db_file + ".tmp"
+            os.makedirs(self._db_dir, exist_ok=True)
+            tmp = os.path.join(self._db_dir, "robots.json.tmp")
+            final = os.path.join(self._db_dir, "robots.json")
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
-            os.replace(tmp, self._db_file)
+            os.replace(tmp, final)
             self._last_db_write = time.time()
         except Exception as e:
             print(f"[M08] DB save error: {e}")
@@ -584,61 +591,78 @@ class M08_Robots(Module):
         ts_now = ctx.get("ts", time.time())
         new_alerts = []
 
+        # M08 detects robots via VOLUME ANOMALY, not synthetic tick-CV:
+        #   robot pattern = last poll volume >= ROBOT_VOL_RATIO x recent average
+        #                   AND price barely moved (abs change <= ROBOT_PRICE_TOL)
+        # This works with REST (one tick/poll) and stays accurate with real
+        # WebSocket trades (push_trade still records them).
+        vol_ratio = _env_float("ROBOT_VOL_RATIO", 2.0)
+        price_tol = _env_float("ROBOT_PRICE_TOLERANCE", 0.002)  # 0.2%
+
         for t, s in states.items():
-            ts = s.trade_times
-            if len(ts) < 8:
-                continue
-            gaps = [ts[i + 1] - ts[i] for i in range(len(ts) - 1)]
-            if not gaps or statistics.fmean(gaps) <= 0:
-                continue
-            mu = statistics.fmean(gaps)
-            sd = statistics.pstdev(gaps) if len(gaps) > 1 else 0
-            if mu <= 0 or sd == 0:
-                continue
-            cv = sd / mu
-            if cv >= 0.25:
-                # Not a robot — remove stale session if exists
-                if t in self.sessions and self.sessions[t].active:
-                    self.sessions[t].active = False
+            h = s.history
+            if len(h) < 6:
                 continue
 
-            # Robot detected / continuing
+            # recent volume window (last 6 polls)
+            recent = h[-6:]
+            prev_vols = [v for _, _, v in recent[:-1] if v]
+            last_vol = recent[-1][2] or 0
+            if not prev_vols or last_vol <= 0:
+                continue
+            avg_prev = statistics.fmean(prev_vols)
+            if avg_prev <= 0:
+                continue
+
+            vol_x = last_vol / avg_prev
+
+            # price stability: compare last two prices
+            prices = [p for _, p, _ in recent[-3:] if p]
+            if len(prices) < 2 or prices[-2] == 0:
+                continue
+            price_move = abs(prices[-1] - prices[-2]) / prices[-2]
+
             key = t
             sess = self.sessions.get(key)
-            is_new = False
-            if sess is None or not sess.active:
-                sess = RobotSession(
-                    ticker=t,
-                    detected_at=ts_now,
-                    cv=cv,
-                    start_price=s.last or 0.0,
-                    start_volume=s.volume or 0.0,
+            if vol_x >= vol_ratio and price_move <= price_tol:
+                # Robot active / continuing
+                is_new = False
+                if sess is None or not sess.active:
+                    sess = RobotSession(
+                        ticker=t,
+                        detected_at=ts_now,
+                        cv=round(vol_x, 2),  # reuse cv slot as volume multiple
+                        start_price=prices[0] if prices else 0.0,
+                        start_volume=int(avg_prev),
+                    )
+                    self.sessions[key] = sess
+                    is_new = True
+
+                sess.last_update = ts_now
+                sess.last_price = prices[-1]
+                sess.last_volume = int(last_vol)
+                sess.active = True
+                sess.next_strike_estimate = 0.0  # unknown cadence in REST
+
+                text = (
+                    f"x{vol_x:.1f} объём ({int(last_vol)}, ср {int(avg_prev)}), "
+                    f"цена {prices[-1]:.4f} (+{price_move*100:.3f}%), "
+                    f"{int(ts_now - sess.detected_at)}s в работе"
                 )
-                self.sessions[key] = sess
-                is_new = True
-
-            # Store gaps on session (for countdown)
-            sess.gaps = gaps
-            sess.record(ts_now, s.last or 0.0, s.volume or 0.0, cv)
-            sess.next_strike_estimate = sess.compute_next_strike()
-
-            next_in = sess.next_strike_estimate
-            text = (
-                f"CV={cv:.3f}, ~{next_in:.1f}s до удара, "
-                f"{sess.duration_sec:.0f}s в работе, "
-                f"цена {sess.start_price:.4f} → {sess.last_price:.4f} "
-                f"({sess.price_move * 100:+.3f}%)"
-            )
-
-            out.append(Signal(
-                self.name, t, round(cv, 3),
-                text,
-                severity=min(5, int(cv * 100) + 2),
-            ))
-
-            if is_new:
-                new_alerts.append(t)
-                self._maybe_alert_sound(t, is_new=True)
+                out.append(Signal(
+                    self.name, t, round(vol_x, 1),
+                    text,
+                    severity=min(5, int(vol_x)),
+                ))
+                if is_new:
+                    new_alerts.append(t)
+                    self._maybe_alert_sound(t, is_new=True)
+            else:
+                # Pattern broken — close session, save to DB
+                if sess and sess.active:
+                    sess.active = False
+                    sess.end_time = ts_now
+                    sess.end_price = prices[-1]
 
         # Persist DB every cycle (throttled)
         if new_alerts:
@@ -847,7 +871,7 @@ class M13_Volatility(Module):
 # M14 — VWAP deviation
 # ---------------------------------------------------------------------------
 class M14_VWAP(Module):
-    name = "M14 Срыв от средней"
+    name = "М14 Отрыв от средней"
 
     def evaluate(self, states, ctx):
         out = []
@@ -881,7 +905,7 @@ class M14_VWAP(Module):
 # M15 — Крупные деньги (whale / institutional volume)
 # ---------------------------------------------------------------------------
 class M15_Fan(Module):
-    name = "M15 Крупные деньги"
+    name = "М15 Крупные деньги"
 
     def __init__(self):
         self.threshold = _env_int("FAN_VOLUME_THRESHOLD", 1_000_000)
@@ -941,7 +965,7 @@ def _fetch_forex_boardprice(security: str) -> dict:
 
 
 class M16_Forex(Module):
-    name = "M16 Валюты"
+    name = "М16 Валюты"
 
     def __init__(self):
         self.forex_states: dict[str, TickerState] = {}
