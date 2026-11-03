@@ -70,8 +70,103 @@ MOEX_LOGIN = os.getenv("MOEX_LOGIN", "guest")
 MOEX_PASSCODE = os.getenv("MOEX_PASSCODE", "guest")
 BASE = os.getenv("MOEX_REST_BASE", "https://iss.moex.com/iss")
 
-EQUITIES = _csv("EQUITIES", "SBER,GAZP,LKOH,VTBR,MGNT,ROSN,GMKN,TATN,SNGS,PLZT")
-FUTURES = _csv("FUTURES", "SIU6,BRU6,GDH6,MEU6")
+EQUITIES = _csv("EQUITIES", "")  # empty = full TQBR board (see _get_equities())
+FUTURES = _csv("FUTURES", "")    # empty = full FUTURE board
+FUTURES_TOP_N = int(os.getenv("FUTURES_TOP_N", "30"))  # top-N by VALTODAY for futures
+EQUITIES_TOP_N = int(os.getenv("EQUITIES_TOP_N", "20")) # 0 = all, else top-N (by VALTODAY from boardprice)
+FOREX_TOP_N = int(os.getenv("FOREX_TOP_N", "20")) # top-N by VALTODAY for currencies
+
+def _fetch_board_securities(board: str, top_n: int = 0) -> list:
+    """Return the most-active tickers on a board.
+
+    1. securities.json -> all active SECIDs on the board (one call).
+    2. If top_n > 0: probe a candidate pool with parallel individual
+       boardprice calls to read VALTODAY, sort desc, keep top_n.
+    3. If top_n == 0: return the full active list.
+    Falls back to [] on network error (caller uses hardcoded core list).
+    """
+    import urllib.request, json as _json
+    import concurrent.futures
+
+    board_map = {
+        "TQBR":   "stock/markets/shares",
+        "CURREN": "stock/markets/forex",
+        "FUTURE": "stock/markets/futures",
+    }
+    eng = board_map.get(board, "stock/markets/shares")
+
+    # Step 1: all active SECIDs
+    url_sec = f"{BASE}/engines/{eng}/boards/{board}/securities.json?iss.meta=off"
+    req = urllib.request.Request(url_sec, headers={"User-Agent": "moex-screener/3.1"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+        sec = data.get("securities", {})
+        columns = sec.get("columns", [])
+        rows = sec.get("data", [])
+        if not rows:
+            return []
+        idx_secid = columns.index("SECID") if "SECID" in columns else 0
+        idx_status = columns.index("STATUS") if "STATUS" in columns else None
+        idx_type = columns.index("SECTYPE") if "SECTYPE" in columns else None
+        all_ids = []
+        for row in rows:
+            status = row[idx_status] if idx_status is not None else "A"
+            sec_type = row[idx_type] if idx_type is not None else ""
+            if status != "A":
+                continue
+            if board == "TQBR" and sec_type in ("IFA1", "IFA2", "IFA3", "IFAY"):
+                continue
+            all_ids.append(row[idx_secid])
+    except Exception as e:
+        print(f"[REF] securities.json {board} fetch failed: {e}")
+        return []
+
+    if top_n <= 0:
+        return all_ids
+
+    # Step 2: rank candidate pool by VALTODAY (parallel, bounded)
+    pool = all_ids[:min(120, len(all_ids))]
+
+    def _valtoday(secid: str) -> float:
+        url_bp = (f"{BASE}/engines/{eng}/boards/{board}/securities/{secid}/boardprice.json"
+                  f"?iss.meta=off&iss.depth=1")
+        try:
+            r2 = urllib.request.Request(url_bp, headers={"User-Agent": "moex-screener/3.1"})
+            with urllib.request.urlopen(r2, timeout=12) as resp:
+                bp = _json.loads(resp.read().decode("utf-8"))
+            md = bp.get("marketdata", {})
+            cols = md.get("columns", [])
+            brows = md.get("data", [])
+            if not brows or "VALTODAY" not in cols:
+                return 0.0
+            return float(brows[0][cols.index("VALTODAY")] or 0)
+        except Exception:
+            return 0.0
+
+    ranked = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
+        for secid, val in zip(pool, ex.map(_valtoday, pool)):
+            ranked[secid] = val
+    top = sorted(ranked, key=lambda s: ranked[s], reverse=True)[:top_n]
+    # Guard: if VALTODAY ranking returned all zeros (API hiccup), fall back to first top_n
+    if all(v == 0 for v in ranked.values()):
+        top = all_ids[:top_n]
+    return top
+
+
+def _get_equities() -> list:
+    """Return EQUITIES: explicit list from env, or top EQUITIES_TOP_N TQBR by VALTODAY."""
+    if EQUITIES:
+        return EQUITIES
+    return _fetch_board_securities("TQBR", top_n=EQUITIES_TOP_N)
+
+
+def _get_futures() -> list:
+    """Return FUTURES: explicit list from env, or top FUTURES_TOP_N FUTURE by VALTODAY."""
+    if FUTURES:
+        return FUTURES
+    return _fetch_board_securities("FUTURE", top_n=FUTURES_TOP_N)
 
 # Arba (M10) — linked instrument pairs: (regular, preferred)
 ARBA_PAIRS = [
@@ -1279,8 +1374,14 @@ class ScreenerEngine:
                  equities: list | None = None,
                  futures: list | None = None,
                  arba_pairs: list | None = None):
-        self.equities = equities or EQUITIES
-        self.futures = futures or FUTURES
+        self.equities = equities or _get_equities()
+        self.futures = futures or _get_futures()
+        if not self.equities:
+            print("[BOOT] No equities — falling back to core-10")
+            self.equities = ["SBER","GAZP","LKOH","VTBR","MGNT","ROSN","GMKN","TATN","SNGS","PLZT"]
+        if not self.futures:
+            print("[BOOT] No futures — falling back to core-4")
+            self.futures = ["SIU6","BRU6","GDH6","MEU6"]
         self.arba_pairs = arba_pairs or ARBA_PAIRS
 
         self.states: dict[str, TickerState] = {t: TickerState(t) for t in self.equities}

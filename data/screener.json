@@ -1,257 +1,970 @@
 {
- "ts": 1793705867.0329971,
- "time": "2026-11-03 14:37:47",
+ "ts": 1793711995.0123737,
+ "time": "2026-11-03 16:19:55",
  "signals": [
   {
    "module": "М1 Кто торгуется",
-   "ticker": "GAZP",
-   "value": 6999827145.0,
-   "text": "day value 6,999,827,145 RUB",
+   "ticker": "AKMM",
+   "value": 2767800424.0,
+   "text": "day value 2,767,800,424 RUB",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "SBER",
-   "value": 3053764604.0,
-   "text": "day value 3,053,764,604 RUB",
+   "ticker": "AFKS",
+   "value": 747219758.0,
+   "text": "day value 747,219,758 RUB",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "LKOH",
-   "value": 2870640862.0,
-   "text": "day value 2,870,640,862 RUB",
+   "ticker": "AFLT",
+   "value": 663730685.0,
+   "text": "day value 663,730,685 RUB",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "VTBR",
-   "value": 2050070826.0,
-   "text": "day value 2,050,070,826 RUB",
+   "ticker": "ASTR",
+   "value": 439469815.0,
+   "text": "day value 439,469,815 RUB",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "TATN",
-   "value": 1216181065.0,
-   "text": "day value 1,216,181,065 RUB",
+   "ticker": "AKMP",
+   "value": 437042004.0,
+   "text": "day value 437,042,004 RUB",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "GMKN",
-   "value": 1084912357.0,
-   "text": "day value 1,084,912,357 RUB",
-   "severity": 5
-  },
-  {
-   "module": "М1 Кто торгуется",
-   "ticker": "ROSN",
-   "value": 979609366.0,
-   "text": "day value 979,609,366 RUB",
-   "severity": 5
-  },
-  {
-   "module": "М1 Кто торгуется",
-   "ticker": "MGNT",
-   "value": 638571600.0,
-   "text": "day value 638,571,600 RUB",
+   "ticker": "BCSD",
+   "value": 414075598.0,
+   "text": "day value 414,075,598 RUB",
    "severity": 5
   },
   {
    "module": "М15 Крупные деньги",
-   "ticker": "GAZP",
-   "value": 61155650.0,
-   "text": "крупные деньги: 61,155,650 шт за день",
+   "ticker": "AKMP",
+   "value": 339422099.0,
+   "text": "крупные деньги: 339,422,099 шт за день",
    "severity": 5
   },
   {
    "module": "М15 Крупные деньги",
-   "ticker": "VTBR",
-   "value": 37087756.0,
-   "text": "крупные деньги: 37,087,756 шт за день",
+   "ticker": "AFKS",
+   "value": 91476900.0,
+   "text": "крупные деньги: 91,476,900 шт за день",
    "severity": 5
   },
   {
    "module": "М15 Крупные деньги",
-   "ticker": "SNGS",
-   "value": 21992200.0,
-   "text": "крупные деньги: 21,992,200 шт за день",
+   "ticker": "AKMB",
+   "value": 34066380.0,
+   "text": "крупные деньги: 34,066,380 шт за день",
    "severity": 5
   },
   {
    "module": "М15 Крупные деньги",
-   "ticker": "SBER",
-   "value": 10460351.0,
-   "text": "крупные деньги: 10,460,351 шт за день",
+   "ticker": "BCSD",
+   "value": 28288671.0,
+   "text": "крупные деньги: 28,288,671 шт за день",
    "severity": 5
   },
   {
    "module": "М15 Крупные деньги",
-   "ticker": "GMKN",
-   "value": 9620890.0,
-   "text": "крупные деньги: 9,620,890 шт за день",
+   "ticker": "ALRS",
+   "value": 19021370.0,
+   "text": "крупные деньги: 19,021,370 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "AFLT",
+   "value": 18094910.0,
+   "text": "крупные деньги: 18,094,910 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "AKMM",
+   "value": 15304722.0,
+   "text": "крупные деньги: 15,304,722 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "ABRD",
+   "value": 88.0,
+   "text": "🔴 SHR 12 ударов @ 119.00, каждые ~88s, QTY=2, в работе 158 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKCN",
+   "value": 87.0,
+   "text": "🟢 LON 8 ударов @ 80.70, каждые ~87s, QTY=1, в работе 181 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "ABRD",
+   "value": 85.0,
+   "text": "🟢 LON 37 ударов @ 120.00, каждые ~85s, QTY=2, в работе 330 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSB",
+   "value": 80.0,
+   "text": "🟢 LON 6 ударов @ 16.73, каждые ~80s, QTY=12, в работе 25 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSG",
+   "value": 80.0,
+   "text": "🔴 SHR 11 ударов @ 12.29, каждые ~80s, QTY=5, в работе 34 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSG",
+   "value": 78.5,
+   "text": "🟢 LON 15 ударов @ 12.19, каждые ~78s, QTY=20, в работе 128 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BANE",
+   "value": 76.0,
+   "text": "🔴 SHR 11 ударов @ 1256.50, каждые ~76s, QTY=3, в работе 92 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BAZA",
+   "value": 74.0,
+   "text": "🔴 SHR 6 ударов @ 144.20, каждые ~74s, QTY=3, в работе 10 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMFL",
+   "value": 72.0,
+   "text": "🟢 LON 73 ударов @ 143.80, каждые ~72s, QTY=18, в работе 288 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKFB",
+   "value": 58.0,
+   "text": "🟢 LON 12 ударов @ 143.57, каждые ~58s, QTY=50, в работе 81 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSG",
+   "value": 58.0,
+   "text": "🔴 SHR 8 ударов @ 12.16, каждые ~58s, QTY=11, в работе 11 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMNR",
+   "value": 53.0,
+   "text": "🟢 LON 10 ударов @ 159.74, каждые ~53s, QTY=8, в работе 442 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSD",
+   "value": 51.0,
+   "text": "🟢 LON 28 ударов @ 14.64, каждые ~51s, QTY=241, в работе 44 мин",
+   "severity": 5
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "ASSB",
+   "value": 48.8,
+   "text": "🔴 SHR 9 ударов @ 2.71, каждые ~49s, QTY=1, в работе 142 мин",
+   "severity": 5
+  },
+  {
+   "module": "М3 Всплеск объёма",
+   "ticker": "AQUA",
+   "value": 6.9,
+   "text": "объём x6.9 от нормы",
    "severity": 5
   },
   {
    "module": "М10 Арбитраж",
    "ticker": "SBER/SBERP",
-   "value": -0.18,
-   "text": "ОТРИЦАТЕЛЬНЫЙ СПРЕД -0.1800",
+   "value": -0.08,
+   "text": "ОТРИЦАТЕЛЬНЫЙ СПРЕД -0.0800",
    "severity": 5
   },
   {
    "module": "М1 Кто торгуется",
-   "ticker": "SNGS",
-   "value": 385591486.0,
-   "text": "day value 385,591,486 RUB",
+   "ticker": "ALRS",
+   "value": 385503250.0,
+   "text": "day value 385,503,250 RUB",
    "severity": 4
   },
   {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSD",
+   "value": 44.0,
+   "text": "🔴 SHR 20 ударов @ 14.63, каждые ~44s, QTY=400, в работе 30 мин",
+   "severity": 4
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BAZA",
+   "value": 43.0,
+   "text": "🟢 LON 4 ударов @ 144.50, каждые ~43s, QTY=4, в работе 12 мин",
+   "severity": 4
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BAZA",
+   "value": 43.0,
+   "text": "🟢 LON 4 ударов @ 144.40, каждые ~43s, QTY=4, в работе 12 мин",
+   "severity": 4
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSD",
+   "value": 39.0,
+   "text": "🟢 LON 85 ударов @ 14.64, каждые ~39s, QTY=78, в работе 123 мин",
+   "severity": 4
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "AKMB",
+   "value": 12.8,
+   "text": "x12.8 от плана (43,806 шт)",
+   "severity": 4
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "AQUA",
+   "value": 7.2,
+   "text": "x7.2 от плана (100 шт)",
+   "severity": 4
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "AKPP",
+   "value": 5.9,
+   "text": "x5.9 от плана (19 шт)",
+   "severity": 4
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "APTK",
+   "value": 5.4,
+   "text": "x5.4 от плана (41 шт)",
+   "severity": 4
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "AKMC",
+   "value": 4.4,
+   "text": "x4.4 от плана (12 шт)",
+   "severity": 4
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "AKFB",
+   "value": 247031571.0,
+   "text": "day value 247,031,571 RUB",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKAI",
+   "value": 29.5,
+   "text": "🟢 LON 13 ударов @ 100.58, каждые ~30s, QTY=1, в работе 79 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "ARSA",
+   "value": 26.6,
+   "text": "🟢 LON 15 ударов @ 7.48, каждые ~27s, QTY=5, в работе 286 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSB",
+   "value": 25.0,
+   "text": "🟢 LON 13 ударов @ 16.72, каждые ~25s, QTY=5, в работе 110 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMGL",
+   "value": 24.1,
+   "text": "🔴 SHR 9 ударов @ 122.00, каждые ~24s, QTY=5, в работе 283 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMGB",
+   "value": 23.1,
+   "text": "🔴 SHR 23 ударов @ 128.20, каждые ~23s, QTY=1, в работе 127 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKAI",
+   "value": 23.0,
+   "text": "🟢 LON 4 ударов @ 100.08, каждые ~23s, QTY=1, в работе 16 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMVY",
+   "value": 22.9,
+   "text": "🔴 SHR 59 ударов @ 1220.00, каждые ~23s, QTY=1, в работе 38 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMFL",
+   "value": 22.5,
+   "text": "🟢 LON 23 ударов @ 143.90, каждые ~22s, QTY=23, в работе 194 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKIE",
+   "value": 21.5,
+   "text": "🟢 LON 6 ударов @ 915.93, каждые ~22s, QTY=1, в работе 41 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKFN",
+   "value": 20.3,
+   "text": "🔴 SHR 5 ударов @ 97.70, каждые ~20s, QTY=1, в работе 60 мин",
+   "severity": 3
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AMRE",
+   "value": 19.2,
+   "text": "🔴 SHR 6 ударов @ 108.30, каждые ~19s, QTY=6, в работе 68 мин",
+   "severity": 3
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "ARSA",
+   "value": 3.8,
+   "text": "x3.8 от плана (38 шт)",
+   "severity": 3
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "AFLT",
+   "value": 2.5,
+   "text": "x2.5 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "AKMB",
+   "value": 2.5,
+   "text": "x2.5 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "AQUA",
+   "value": 2.2,
+   "text": "x2.2 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "AFKS",
+   "value": 2.0,
+   "text": "x2.0 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "AKFB",
+   "value": 2.0,
+   "text": "x2.0 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М2 Скачок цены",
+   "ticker": "AKHT",
+   "value": -0.3,
+   "text": "-0.30% за 60s",
+   "severity": 3
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "AKGD",
+   "value": 112525926.0,
+   "text": "day value 112,525,926 RUB",
+   "severity": 2
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "AMNR",
+   "value": 111640189.0,
+   "text": "day value 111,640,189 RUB",
+   "severity": 2
+  },
+  {
    "module": "М15 Крупные деньги",
-   "ticker": "ROSN",
-   "value": 2612460.0,
-   "text": "крупные деньги: 2,612,460 шт за день",
+   "ticker": "ASTR",
+   "value": 2028520.0,
+   "text": "крупные деньги: 2,028,520 шт за день",
+   "severity": 2
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "BCSW",
+   "value": 8.0,
+   "text": "🟢 LON 26 ударов @ 11.05, каждые ~8s, QTY=1, в работе 263 мин",
+   "severity": 2
+  },
+  {
+   "module": "М8 Роботы (радар)",
+   "ticker": "AKGP",
+   "value": 7.0,
+   "text": "🟢 LON 135 ударов @ 1.15, каждые ~7s, QTY=1, в работе 60 мин",
    "severity": 2
   },
   {
    "module": "М12 Скальпинг",
-   "ticker": "LKOH",
-   "value": 2.8,
-   "text": "x2.8 от плана (21 шт)",
+   "ticker": "AKCN",
+   "value": 2.1,
+   "text": "x2.1 от плана (3 шт)",
    "severity": 2
   },
   {
    "module": "М12 Скальпинг",
-   "ticker": "MGNT",
-   "value": 2.3,
-   "text": "x2.3 от плана (24 шт)",
+   "ticker": "AMRH",
+   "value": 2.1,
+   "text": "x2.1 от плана (4 шт)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "ROSN",
+   "ticker": "AMGB",
+   "value": 0.1,
+   "text": "spread 0.1000 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "AKGD",
    "value": 0.05,
    "text": "spread 0.0500 (thin)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "GMKN",
+   "ticker": "BCSG",
+   "value": 0.04,
+   "text": "spread 0.0400 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "APRI",
+   "value": 0.03,
+   "text": "spread 0.0300 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "ARSA",
+   "value": 0.03,
+   "text": "spread 0.0300 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "BCSW",
+   "value": 0.03,
+   "text": "spread 0.0300 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "ABIO",
    "value": 0.02,
    "text": "spread 0.0200 (thin)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "SNGS",
-   "value": 0.015,
-   "text": "spread 0.0150 (thin)",
+   "ticker": "AFLT",
+   "value": 0.02,
+   "text": "spread 0.0200 (thin)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "SBER",
+   "ticker": "AKFB",
+   "value": 0.02,
+   "text": "spread 0.0200 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "AKME",
+   "value": 0.02,
+   "text": "spread 0.0200 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "BCSB",
+   "value": 0.014,
+   "text": "spread 0.0140 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "AIIQ",
+   "value": 0.012,
+   "text": "spread 0.0120 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "AKMM",
    "value": 0.01,
    "text": "spread 0.0100 (thin)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "GAZP",
+   "ticker": "AKUP",
    "value": 0.01,
    "text": "spread 0.0100 (thin)",
    "severity": 2
   },
   {
    "module": "М5 Толстые уровни",
-   "ticker": "VTBR",
-   "value": 0.005,
-   "text": "spread 0.0050 (thin)",
+   "ticker": "ALRS",
+   "value": 0.01,
+   "text": "spread 0.0100 (thin)",
    "severity": 2
-  },
-  {
-   "module": "М15 Крупные деньги",
-   "ticker": "TATN",
-   "value": 1983408.0,
-   "text": "крупные деньги: 1,983,408 шт за день",
-   "severity": 1
   }
  ],
  "states": {
+  "ABIO": {
+   "last": 46.5,
+   "bid": 46.3,
+   "ask": 46.32,
+   "day_volume": 56446.0,
+   "day_value": 2652901.0,
+   "updates": 76532
+  },
+  "ABRD": {
+   "last": 120.0,
+   "bid": 119.4,
+   "ask": 119.8,
+   "day_volume": 21340.0,
+   "day_value": 2552020.0,
+   "updates": 27554
+  },
+  "AFKS": {
+   "last": 8.313,
+   "bid": 8.047,
+   "ask": 8.051,
+   "day_volume": 91476900.0,
+   "day_value": 747219758.0,
+   "updates": 490196
+  },
+  "AFLT": {
+   "last": 36.88,
+   "bid": 36.53,
+   "ask": 36.55,
+   "day_volume": 18094910.0,
+   "day_value": 663730685.0,
+   "updates": 490196
+  },
+  "AIIQ": {
+   "last": 11.428,
+   "bid": 11.305,
+   "ask": 11.317,
+   "day_volume": 542404.0,
+   "day_value": 6162463.0,
+   "updates": 99374
+  },
+  "AKAI": {
+   "last": 100.33,
+   "bid": 99.88,
+   "ask": 100.08,
+   "day_volume": 350.0,
+   "day_value": 35115.0,
+   "updates": 8960
+  },
+  "AKBC": {
+   "last": 96.2,
+   "bid": 94.6,
+   "ask": 94.8,
+   "day_volume": 34387.0,
+   "day_value": 3291670.0,
+   "updates": 37815
+  },
+  "AKCN": {
+   "last": 80.1,
+   "bid": 79.6,
+   "ask": 79.9,
+   "day_volume": 149.0,
+   "day_value": 12003.0,
+   "updates": 6149
+  },
+  "AKFB": {
+   "last": 143.44,
+   "bid": 143.59,
+   "ask": 143.61,
+   "day_volume": 1720620.0,
+   "day_value": 247031571.0,
+   "updates": 490192
+  },
+  "AKFN": {
+   "last": 98.9,
+   "bid": 97.9,
+   "ask": 98.2,
+   "day_volume": 507.0,
+   "day_value": 50140.0,
+   "updates": 4996
+  },
+  "AKGD": {
+   "last": 230.75,
+   "bid": 228.75,
+   "ask": 228.8,
+   "day_volume": 494186.0,
+   "day_value": 112525926.0,
+   "updates": 257001
+  },
+  "AKGP": {
+   "last": 1.146,
+   "bid": 1.146,
+   "ask": 1.148,
+   "day_volume": 242785.0,
+   "day_value": 278195.0,
+   "updates": 294834
+  },
+  "AKHT": {
+   "last": 99.06,
+   "bid": 98.58,
+   "ask": 98.87,
+   "day_volume": 343.0,
+   "day_value": 33961.0,
+   "updates": 11972
+  },
+  "AKIE": {
+   "last": 915.01,
+   "bid": 910.27,
+   "ask": 915.09,
+   "day_volume": 375.0,
+   "day_value": 343196.0,
+   "updates": 3882
+  },
+  "AKMB": {
+   "last": 2.0016,
+   "bid": 1.9984,
+   "ask": 1.9988,
+   "day_volume": 34066380.0,
+   "day_value": 68149151.0,
+   "updates": 453000
+  },
+  "AKMC": {
+   "last": 1291.95,
+   "bid": 1287.59,
+   "ask": 1288.49,
+   "day_volume": 1561.0,
+   "day_value": 2011768.0,
+   "updates": 6664
+  },
+  "AKME": {
+   "last": 184.94,
+   "bid": 183.98,
+   "ask": 184.0,
+   "day_volume": 69055.0,
+   "day_value": 12754070.0,
+   "updates": 97962
+  },
+  "AKMM": {
+   "last": 180.82,
+   "bid": 180.86,
+   "ask": 180.87,
+   "day_volume": 15304722.0,
+   "day_value": 2767800424.0,
+   "updates": 490196
+  },
+  "AKMP": {
+   "last": 1.2873,
+   "bid": 1.2872,
+   "ask": 1.2873,
+   "day_volume": 339422099.0,
+   "day_value": 437042004.0,
+   "updates": 490196
+  },
+  "AKPP": {
+   "last": 110.19,
+   "bid": 109.12,
+   "ask": 109.36,
+   "day_volume": 26256.0,
+   "day_value": 2860599.0,
+   "updates": 122785
+  },
+  "AKQU": {
+   "last": 69.57,
+   "bid": 68.72,
+   "ask": 68.86,
+   "day_volume": 1322.0,
+   "day_value": 91376.0,
+   "updates": 16508
+  },
+  "AKRN": {
+   "last": 18100.0,
+   "bid": 17645.0,
+   "ask": 17680.0,
+   "day_volume": 267.0,
+   "day_value": 4744475.0,
+   "updates": 8451
+  },
+  "AKUP": {
+   "last": 12.69,
+   "bid": 12.6,
+   "ask": 12.61,
+   "day_volume": 14790.0,
+   "day_value": 187138.0,
+   "updates": 59511
+  },
+  "ALRS": {
+   "last": 20.16,
+   "bid": 20.16,
+   "ask": 20.17,
+   "day_volume": 19021370.0,
+   "day_value": 385503250.0,
+   "updates": 485196
+  },
+  "AMFL": {
+   "last": 143.6,
+   "bid": 143.7,
+   "ask": 143.8,
+   "day_volume": 185192.0,
+   "day_value": 26634847.0,
+   "updates": 40404
+  },
+  "AMGB": {
+   "last": 128.7,
+   "bid": 128.3,
+   "ask": 128.4,
+   "day_volume": 86.0,
+   "day_value": 11053.0,
+   "updates": 980
+  },
+  "AMGL": {
+   "last": 124.0,
+   "bid": 122.6,
+   "ask": 122.8,
+   "day_volume": 3269.0,
+   "day_value": 400920.0,
+   "updates": 2940
+  },
+  "AMIX": {
+   "last": 105.2,
+   "bid": 101.7,
+   "ask": 101.9,
+   "day_volume": 8727.0,
+   "day_value": 893336.0,
+   "updates": 2786
+  },
+  "AMNR": {
+   "last": 159.608,
+   "bid": 159.731,
+   "ask": 159.737,
+   "day_volume": 698899.0,
+   "day_value": 111640189.0,
+   "updates": 21368
+  },
+  "AMNY": {
+   "last": 1305.87,
+   "bid": 1303.02,
+   "ask": 1304.84,
+   "day_volume": 1813.0,
+   "day_value": 2366921.0,
+   "updates": 2644
+  },
+  "AMRE": {
+   "last": 110.1,
+   "bid": 108.0,
+   "ask": 108.3,
+   "day_volume": 2073.0,
+   "day_value": 226798.0,
+   "updates": 5389
+  },
+  "AMRH": {
+   "last": 167.6,
+   "bid": 167.3,
+   "ask": 167.5,
+   "day_volume": 24.0,
+   "day_value": 4018.0,
+   "updates": 1269
+  },
+  "AMVD": {
+   "last": 791.0,
+   "bid": 787.0,
+   "ask": 790.0,
+   "day_volume": 7922.0,
+   "day_value": 6254623.0,
+   "updates": 1470
+  },
+  "AMVY": {
+   "last": 1221.0,
+   "bid": 1216.0,
+   "ask": 1221.0,
+   "day_volume": 31.0,
+   "day_value": 37850.0,
+   "updates": 242
+  },
+  "APRI": {
+   "last": 15.03,
+   "bid": 15.2,
+   "ask": 15.23,
+   "day_volume": 20250.0,
+   "day_value": 308081.0,
+   "updates": 5586
+  },
+  "APTK": {
+   "last": 6.516,
+   "bid": 6.476,
+   "ask": 6.484,
+   "day_volume": 525550.0,
+   "day_value": 3424211.0,
+   "updates": 68434
+  },
+  "AQUA": {
+   "last": 323.6,
+   "bid": 319.9,
+   "ask": 320.0,
+   "day_volume": 74436.0,
+   "day_value": 23991846.0,
+   "updates": 338835
+  },
+  "ARSA": {
+   "last": 7.42,
+   "bid": 7.48,
+   "ask": 7.51,
+   "day_volume": 15100.0,
+   "day_value": 112711.0,
+   "updates": 1666
+  },
+  "ASSB": {
+   "last": 2.715,
+   "bid": 2.715,
+   "ask": 2.725,
+   "day_volume": 110000.0,
+   "day_value": 299065.0,
+   "updates": 3626
+  },
+  "ASTR": {
+   "last": 214.4,
+   "bid": 215.85,
+   "ask": 216.05,
+   "day_volume": 2028520.0,
+   "day_value": 439469815.0,
+   "updates": 490196
+  },
+  "AVAN": {
+   "last": 541.0,
+   "bid": 535.0,
+   "ask": 536.0,
+   "day_volume": 1915.0,
+   "day_value": 1022597.0,
+   "updates": 11255
+  },
+  "BANE": {
+   "last": 1258.5,
+   "bid": 1252.0,
+   "ask": 1254.0,
+   "day_volume": 22039.0,
+   "day_value": 27748995.0,
+   "updates": 135183
+  },
+  "BANEP": {
+   "last": 785.0,
+   "bid": 780.0,
+   "ask": 780.5,
+   "day_volume": 43699.0,
+   "day_value": 34200485.0,
+   "updates": 164921
+  },
+  "BAZA": {
+   "last": 143.66,
+   "bid": 143.8,
+   "ask": 143.96,
+   "day_volume": 240710.0,
+   "day_value": 34898289.0,
+   "updates": 158605
+  },
+  "BCSB": {
+   "last": 16.694,
+   "bid": 16.662,
+   "ask": 16.676,
+   "day_volume": 104065.0,
+   "day_value": 1737570.0,
+   "updates": 13164
+  },
+  "BCSD": {
+   "last": 14.633,
+   "bid": 14.637,
+   "ask": 14.638,
+   "day_volume": 28288671.0,
+   "day_value": 414075598.0,
+   "updates": 166359
+  },
+  "BCSE": {
+   "last": 924.0,
+   "bid": 920.5,
+   "ask": 928.0,
+   "day_volume": 3777.0,
+   "day_value": 3486278.0,
+   "updates": 5299
+  },
+  "BCSG": {
+   "last": 12.35,
+   "bid": 12.24,
+   "ask": 12.28,
+   "day_volume": 75762.0,
+   "day_value": 925977.0,
+   "updates": 28343
+  },
+  "BCSR": {
+   "last": 10.83,
+   "bid": 10.68,
+   "ask": 10.69,
+   "day_volume": 333026.0,
+   "day_value": 3580556.0,
+   "updates": 9606
+  },
+  "BCSW": {
+   "last": 10.99,
+   "bid": 11.02,
+   "ask": 11.05,
+   "day_volume": 19423.0,
+   "day_value": 213238.0,
+   "updates": 4848
+  },
   "SBER": {
-   "last": 291.11,
-   "bid": 291.1,
-   "ask": 291.11,
-   "day_volume": 10460351.0,
-   "day_value": 3053764604.0,
-   "updates": 10006
-  },
-  "GAZP": {
-   "last": 115.34,
-   "bid": 112.97,
-   "ask": 112.98,
-   "day_volume": 61155650.0,
-   "day_value": 6999827145.0,
-   "updates": 15006
-  },
-  "LKOH": {
-   "last": 6116.0,
-   "bid": 6059.0,
-   "ask": 6059.5,
-   "day_volume": 469317.0,
-   "day_value": 2870640862.0,
-   "updates": 15006
-  },
-  "VTBR": {
-   "last": 55.65,
-   "bid": 54.91,
-   "ask": 54.915,
-   "day_volume": 37087756.0,
-   "day_value": 2050070826.0,
-   "updates": 15006
-  },
-  "MGNT": {
-   "last": 1803.0,
-   "bid": 1770.0,
-   "ask": 1770.5,
-   "day_volume": 356727.0,
-   "day_value": 638571600.0,
-   "updates": 15006
-  },
-  "ROSN": {
-   "last": 374.9,
-   "bid": 371.8,
-   "ask": 371.85,
-   "day_volume": 2612460.0,
-   "day_value": 979609366.0,
-   "updates": 15006
-  },
-  "GMKN": {
-   "last": 113.64,
-   "bid": 111.62,
-   "ask": 111.64,
-   "day_volume": 9620890.0,
-   "day_value": 1084912357.0,
-   "updates": 15006
-  },
-  "TATN": {
-   "last": 622.0,
-   "bid": 600.8,
-   "ask": 600.9,
-   "day_volume": 1983408.0,
-   "day_value": 1216181065.0,
-   "updates": 15006
-  },
-  "SNGS": {
-   "last": 17.59,
-   "bid": 17.2,
-   "ask": 17.215,
-   "day_volume": 21992200.0,
-   "day_value": 385591486.0,
-   "updates": 15006
-  },
-  "PLZT": {
    "last": null,
    "bid": null,
    "ask": null,
@@ -267,6 +980,14 @@
    "day_value": null,
    "updates": 0
   },
+  "GAZP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
   "GAZPP": {
    "last": null,
    "bid": null,
@@ -275,7 +996,23 @@
    "day_value": null,
    "updates": 0
   },
+  "VTBR": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
   "VTBRP": {
+   "last": null,
+   "bid": null,
+   "ask": null,
+   "day_volume": null,
+   "day_value": null,
+   "updates": 0
+  },
+  "TATN": {
    "last": null,
    "bid": null,
    "ask": null,
@@ -297,9 +1034,9 @@
    "pair": "SBER/SBERP",
    "pair_a": "SBER",
    "pair_b": "SBERP",
-   "spread": -0.17999999999994998,
-   "fair": null,
-   "z_score": null
+   "spread": -0.07999999999998408,
+   "fair": -0.12199999999998568,
+   "z_score": 0.7971490989010925
   },
   {
    "pair": "GAZP/GAZPP",
@@ -321,10 +1058,411 @@
    "pair": "TATN/TATNP",
    "pair_a": "TATN",
    "pair_b": "TATNP",
-   "spread": 9.5,
-   "fair": null,
-   "z_score": null
+   "spread": 11.400000000000091,
+   "fair": 11.370000000000038,
+   "z_score": 0.16744367165608276
   }
  ],
- "robots": []
+ "robots": [
+  {
+   "ticker": "AKFN",
+   "detected_at": 1793708354.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 3627.7582898139954,
+   "strike_price": 97.7,
+   "strike_interval": 20.3,
+   "strikes": 5,
+   "start_price": 97.7,
+   "start_volume": 1,
+   "last_price": 97.7,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 7.1,
+   "period": 20.3,
+   "lots": 1,
+   "operation_count": 5,
+   "first_operation_dttm": "15:19:14",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:02",
+   "lot_in_minute": 2,
+   "seconds_to_next": 7.1,
+   "direction": "short"
+  },
+  {
+   "ticker": "AKIE",
+   "detected_at": 1793708072.0,
+   "last_update": 1793710407.0497298,
+   "duration_sec": 2335.049729824066,
+   "strike_price": 913.0,
+   "strike_interval": 27.9,
+   "strikes": 4,
+   "start_price": 913.0,
+   "start_volume": 2,
+   "last_price": 913.0,
+   "price_move_pct": 0.0,
+   "last_volume": 2,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 27.9,
+   "lots": 2,
+   "operation_count": 4,
+   "first_operation_dttm": "15:14:32",
+   "last_operation_dttm": "15:53:27",
+   "next_operation_dttm": "15:53:54",
+   "lot_in_minute": 4,
+   "seconds_to_next": 0.0,
+   "direction": "short"
+  },
+  {
+   "ticker": "AMGB",
+   "detected_at": 1793704329.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 7652.758289813995,
+   "strike_price": 128.2,
+   "strike_interval": 23.1,
+   "strikes": 23,
+   "start_price": 128.2,
+   "start_volume": 1,
+   "last_price": 128.2,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 10.0,
+   "period": 23.1,
+   "lots": 1,
+   "operation_count": 23,
+   "first_operation_dttm": "14:12:09",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:04",
+   "lot_in_minute": 2,
+   "seconds_to_next": 10.0,
+   "direction": "short"
+  },
+  {
+   "ticker": "AMRH",
+   "detected_at": 1793706042.0,
+   "last_update": 1793710573.33596,
+   "duration_sec": 4531.335959911346,
+   "strike_price": 167.3,
+   "strike_interval": 24.6,
+   "strikes": 6,
+   "start_price": 167.3,
+   "start_volume": 1,
+   "last_price": 167.3,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 24.6,
+   "lots": 1,
+   "operation_count": 6,
+   "first_operation_dttm": "14:40:42",
+   "last_operation_dttm": "15:56:13",
+   "next_operation_dttm": "15:56:37",
+   "lot_in_minute": 2,
+   "seconds_to_next": 0.0,
+   "direction": "short"
+  },
+  {
+   "ticker": "BCSW",
+   "detected_at": 1793686231.0,
+   "last_update": 1793710933.765126,
+   "duration_sec": 24702.765125989914,
+   "strike_price": 11.0,
+   "strike_interval": 31.8,
+   "strikes": 6,
+   "start_price": 11.0,
+   "start_volume": 9,
+   "last_price": 11.0,
+   "price_move_pct": 0.0,
+   "last_volume": 9,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 31.8,
+   "lots": 9,
+   "operation_count": 6,
+   "first_operation_dttm": "09:10:31",
+   "last_operation_dttm": "16:02:13",
+   "next_operation_dttm": "16:02:45",
+   "lot_in_minute": 16,
+   "seconds_to_next": 0.0,
+   "direction": "long"
+  },
+  {
+   "ticker": "AMGL",
+   "detected_at": 1793694989.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 16992.758289813995,
+   "strike_price": 122.0,
+   "strike_interval": 24.1,
+   "strikes": 9,
+   "start_price": 122.0,
+   "start_volume": 5,
+   "last_price": 122.0,
+   "price_move_pct": 0.0,
+   "last_volume": 5,
+   "active": true,
+   "next_strike_estimate": 10.8,
+   "period": 24.1,
+   "lots": 5,
+   "operation_count": 9,
+   "first_operation_dttm": "11:36:29",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:05",
+   "lot_in_minute": 12,
+   "seconds_to_next": 10.8,
+   "direction": "short"
+  },
+  {
+   "ticker": "ARSA",
+   "detected_at": 1793694778.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 17203.758289813995,
+   "strike_price": 7.48,
+   "strike_interval": 26.6,
+   "strikes": 15,
+   "start_price": 7.48,
+   "start_volume": 5,
+   "last_price": 7.48,
+   "price_move_pct": 0.0,
+   "last_volume": 5,
+   "active": true,
+   "next_strike_estimate": 13.3,
+   "period": 26.6,
+   "lots": 5,
+   "operation_count": 15,
+   "first_operation_dttm": "11:32:58",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:08",
+   "lot_in_minute": 11,
+   "seconds_to_next": 13.3,
+   "direction": "long"
+  },
+  {
+   "ticker": "ASSB",
+   "detected_at": 1793703451.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 8530.758289813995,
+   "strike_price": 2.71,
+   "strike_interval": 48.8,
+   "strikes": 9,
+   "start_price": 2.71,
+   "start_volume": 2,
+   "last_price": 2.71,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 35.6,
+   "period": 48.8,
+   "lots": 2,
+   "operation_count": 9,
+   "first_operation_dttm": "13:57:31",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:30",
+   "lot_in_minute": 2,
+   "seconds_to_next": 35.6,
+   "direction": "short"
+  },
+  {
+   "ticker": "ASSB",
+   "detected_at": 1793709144.0,
+   "last_update": 1793711467.638404,
+   "duration_sec": 2323.638403892517,
+   "strike_price": 2.725,
+   "strike_interval": 24.7,
+   "strikes": 4,
+   "start_price": 2.725,
+   "start_volume": 1,
+   "last_price": 2.725,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 24.7,
+   "lots": 1,
+   "operation_count": 4,
+   "first_operation_dttm": "15:32:24",
+   "last_operation_dttm": "16:11:07",
+   "next_operation_dttm": "16:11:32",
+   "lot_in_minute": 2,
+   "seconds_to_next": 0.0,
+   "direction": "short"
+  },
+  {
+   "ticker": "AMVY",
+   "detected_at": 1793709616.0,
+   "last_update": 1793710573.33596,
+   "duration_sec": 957.3359599113464,
+   "strike_price": 1221.0,
+   "strike_interval": 20.6,
+   "strikes": 4,
+   "start_price": 1221.0,
+   "start_volume": 30,
+   "last_price": 1221.0,
+   "price_move_pct": 0.0,
+   "last_volume": 30,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 20.6,
+   "lots": 30,
+   "operation_count": 4,
+   "first_operation_dttm": "15:40:16",
+   "last_operation_dttm": "15:56:13",
+   "next_operation_dttm": "15:56:33",
+   "lot_in_minute": 87,
+   "seconds_to_next": 0.0,
+   "direction": "long"
+  },
+  {
+   "ticker": "AMVY",
+   "detected_at": 1793709685.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 2296.7582898139954,
+   "strike_price": 1220.0,
+   "strike_interval": 22.9,
+   "strikes": 59,
+   "start_price": 1220.0,
+   "start_volume": 1,
+   "last_price": 1220.0,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 10.0,
+   "period": 22.9,
+   "lots": 1,
+   "operation_count": 59,
+   "first_operation_dttm": "15:41:25",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:04",
+   "lot_in_minute": 2,
+   "seconds_to_next": 10.0,
+   "direction": "flat"
+  },
+  {
+   "ticker": "AKIE",
+   "detected_at": 1793710523.0,
+   "last_update": 1793711672.733534,
+   "duration_sec": 1149.7335340976715,
+   "strike_price": 911.4,
+   "strike_interval": 26.0,
+   "strikes": 4,
+   "start_price": 911.4,
+   "start_volume": 1,
+   "last_price": 911.4,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 26.0,
+   "lots": 1,
+   "operation_count": 4,
+   "first_operation_dttm": "15:55:23",
+   "last_operation_dttm": "16:14:32",
+   "next_operation_dttm": "16:14:58",
+   "lot_in_minute": 2,
+   "seconds_to_next": 0.0,
+   "direction": "short"
+  },
+  {
+   "ticker": "BCSW",
+   "detected_at": 1793696146.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 15835.758289813995,
+   "strike_price": 11.05,
+   "strike_interval": 8.0,
+   "strikes": 26,
+   "start_price": 11.05,
+   "start_volume": 1,
+   "last_price": 11.05,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 0.0,
+   "period": 8.0,
+   "lots": 1,
+   "operation_count": 26,
+   "first_operation_dttm": "11:55:46",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:19:49",
+   "lot_in_minute": 7,
+   "seconds_to_next": 0.0,
+   "direction": "long"
+  },
+  {
+   "ticker": "AMRE",
+   "detected_at": 1793707897.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 4084.7582898139954,
+   "strike_price": 108.3,
+   "strike_interval": 19.2,
+   "strikes": 6,
+   "start_price": 108.3,
+   "start_volume": 6,
+   "last_price": 108.3,
+   "price_move_pct": 0.0,
+   "last_volume": 6,
+   "active": true,
+   "next_strike_estimate": 5.9,
+   "period": 19.2,
+   "lots": 6,
+   "operation_count": 6,
+   "first_operation_dttm": "15:11:37",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:00",
+   "lot_in_minute": 18,
+   "seconds_to_next": 5.9,
+   "direction": "flat"
+  },
+  {
+   "ticker": "AKIE",
+   "detected_at": 1793709516.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 2465.7582898139954,
+   "strike_price": 915.93,
+   "strike_interval": 21.5,
+   "strikes": 6,
+   "start_price": 915.93,
+   "start_volume": 1,
+   "last_price": 915.93,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": true,
+   "next_strike_estimate": 8.2,
+   "period": 21.5,
+   "lots": 1,
+   "operation_count": 6,
+   "first_operation_dttm": "15:38:36",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:03",
+   "lot_in_minute": 2,
+   "seconds_to_next": 8.2,
+   "direction": "long"
+  },
+  {
+   "ticker": "AKAI",
+   "detected_at": 1793711018.0,
+   "last_update": 1793711981.7582898,
+   "duration_sec": 963.7582898139954,
+   "strike_price": 100.08,
+   "strike_interval": 23.0,
+   "strikes": 4,
+   "start_price": 100.08,
+   "start_volume": 1,
+   "last_price": 100.08,
+   "price_move_pct": 0.0,
+   "last_volume": 1,
+   "active": false,
+   "next_strike_estimate": 9.7,
+   "period": 23.0,
+   "lots": 1,
+   "operation_count": 4,
+   "first_operation_dttm": "16:03:38",
+   "last_operation_dttm": "16:19:41",
+   "next_operation_dttm": "16:20:04",
+   "lot_in_minute": 2,
+   "seconds_to_next": 0,
+   "direction": "long"
+  }
+ ]
 }
