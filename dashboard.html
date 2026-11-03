@@ -163,29 +163,55 @@ header .status {
 .arba-pair .pair-spread.positive { color: var(--green); }
 .arba-pair .pair-z { font-size: 11px; color: var(--dim); }
 
-/* Robots section */
+/* Robots section — AnyScan-style table */
+.robot-table-head,
 .robot-row {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
   display: grid;
-  grid-template-columns: 80px 1fr 100px 80px;
+  grid-template-columns: 90px 90px 60px 80px 70px 80px 80px 80px 90px 80px 90px 40px;
   gap: 8px;
   align-items: center;
   font-size: 13px;
 }
+.robot-table-head {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.robot-table-head .col-sec { text-align: right; }
+.robot-row {
+  border-bottom: 1px solid var(--border);
+  font-family: 'Consolas', monospace;
+}
 .robot-row:last-child { border-bottom: none; }
 .robot-row.active { border-left: 3px solid var(--green); }
 .robot-row.closed { opacity: 0.55; border-left: 3px solid var(--border); }
-.robot-row .ticker { font-family: 'Consolas', monospace; font-weight: 700; color: var(--blue); }
-.robot-row.closed .ticker { color: var(--dim); }
-.robot-row .price { font-family: 'Consolas', monospace; }
-.robot-row .countdown {
-  font-family: 'Consolas', monospace;
-  font-weight: 700;
-  color: var(--yellow);
-  text-align: center;
+.robot-row .col-ticker { font-weight: 700; color: var(--blue); }
+.robot-row.closed .col-ticker { color: var(--dim); }
+.robot-row .col-sec { font-weight: 700; color: var(--yellow); text-align: right; }
+.robot-table-head .col-ticker,
+.robot-row .col-ticker { text-align: left; }
+.col-dir { text-align: center; font-weight: 700; }
+.col-dir.long { color: var(--green); }
+.col-dir.short { color: var(--red); }
+.col-copy { text-align: center; }
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--dim);
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
 }
-.robot-row .interval { font-size: 11px; color: var(--dim); text-align: right; }
+.copy-btn:hover { color: var(--blue); border-color: var(--blue); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+.col-lots, .col-period, .col-ops, .col-first, .col-last, .col-next, .col-price, .col-status { text-align: center; }
 .badge-on {
   display: inline-block;
   background: var(--green);
@@ -204,6 +230,33 @@ header .status {
   padding: 1px 6px;
   border-radius: 8px;
 }
+
+/* Nav tabs (AnyScan style) */
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  position: sticky;
+  top: 54px;
+  z-index: 99;
+}
+.nav-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-section { display: none; }
+.tab-section.active { display: block; }
 
 /* Price grid */
 .price-grid {
@@ -240,6 +293,14 @@ header .status {
   </div>
 </header>
 
+<!-- AnyScan-style nav tabs -->
+<nav class="nav-tabs" id="navTabs">
+  <button class="nav-tab active" data-tab="robots">🤖 Роботы</button>
+  <button class="nav-tab" data-tab="activity">📈 Активность</button>
+  <button class="nav-tab" data-tab="arba">⚡ Арбитраж</button>
+  <button class="nav-tab" data-tab="modules">📊 Модули</button>
+</nav>
+
 <div class="container">
   <!-- Summary bar -->
   <div class="summary-bar" id="summaryBar">
@@ -249,42 +310,64 @@ header .status {
     <div class="summary-item"><div class="label">Arba (отр. спред)</div><div class="value" id="arbaCount">—</div></div>
   </div>
 
-  <!-- Robots (M08) — special section -->
-  <div class="module-card" id="robotsCard" style="margin-bottom:16px;">
-    <div class="module-header" onclick="toggleCard('robots')">
-      <h3>🤖 M08 — Роботы (радар)</h3>
-      <span class="count" id="robotCountBadge">0</span>
-    </div>
-    <div class="module-body" id="robotsBody">
-      <div class="no-signals">Роботы не обнаружены</div>
-    </div>
-  </div>
-
-  <!-- Arba (M10) -->
-  <div class="module-card" id="arbaCard" style="margin-bottom:16px;">
-    <div class="module-header" onclick="toggleCard('arba')">
-      <h3>⚡ M10 — Арбитраж</h3>
-      <span class="count" id="arbaCountBadge">0</span>
-    </div>
-    <div class="module-body" id="arbaBody">
-      <div class="no-signals">Нет сигналов</div>
-    </div>
-  </div>
-
-  <!-- Price grid -->
-  <div class="module-card" style="margin-bottom:16px;">
-    <div class="module-header" onclick="toggleCard('prices')">
-      <h3>💹 Текущие цены</h3>
-    </div>
-    <div class="module-body" id="pricesBody">
-      <div class="price-grid" id="priceGrid">
-        <div class="no-signals">Загрузка…</div>
+  <!-- TAB: Robots (M08) -->
+  <div class="tab-section active" id="tab-robots">
+    <div class="module-card" style="margin-bottom:16px;">
+      <div class="module-header">
+        <h3>🤖 M08 — Роботы (радар) · 6–90с периодичность · мин. жизнь 10 мин</h3>
+        <span class="count" id="robotCountBadge">0</span>
+      </div>
+      <div class="robot-table-head">
+        <span class="col-ticker">Инструмент</span>
+        <span class="col-dir">Направление</span>
+        <span class="col-lots">Лоты</span>
+        <span class="col-period">Период (с)</span>
+        <span class="col-ops">Операций</span>
+        <span class="col-first">1-я оп.</span>
+        <span class="col-last">Пок. оп.</span>
+        <span class="col-next">След. оп.</span>
+        <span class="col-sec">Сек до след.</span>
+        <span class="col-price">Цена</span>
+        <span class="col-status">Статус</span>
+        <span class="col-copy"></span>
+      </div>
+      <div class="module-body" id="robotsBody">
+        <div class="no-signals">Роботы не обнаружены</div>
       </div>
     </div>
   </div>
 
-  <!-- All module signals -->
-  <div class="modules-grid" id="modulesGrid"></div>
+  <!-- TAB: Activity / price grid -->
+  <div class="tab-section" id="tab-activity">
+    <div class="module-card" style="margin-bottom:16px;">
+      <div class="module-header">
+        <h3>💹 Текущие цены</h3>
+      </div>
+      <div class="module-body">
+        <div class="price-grid" id="priceGrid">
+          <div class="no-signals">Загрузка…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Arba (M10) -->
+  <div class="tab-section" id="tab-arba">
+    <div class="module-card" style="margin-bottom:16px;">
+      <div class="module-header">
+        <h3>⚡ M10 — Арбитраж</h3>
+        <span class="count" id="arbaCountBadge">0</span>
+      </div>
+      <div class="module-body" id="arbaBody">
+        <div class="no-signals">Нет данных</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: All module signals -->
+  <div class="tab-section" id="tab-modules">
+    <div class="modules-grid" id="modulesGrid"></div>
+  </div>
 
   <div class="ts" id="footerTs">—</div>
 </div>
@@ -341,39 +424,61 @@ function render(data) {
   document.getElementById("sigCount").textContent = data.signals.length;
   document.getElementById("critCount").textContent = data.signals.filter(s => s.severity >= 4).length;
 
-  // Robots — show active (green) and recently-closed (grey/red)
+  // Robots — AnyScan-style table (always visible; empty state when none found)
   const robots = data.robots || [];
   const activeRobots = robots.filter(r => r.active);
   const closedRobots = robots.filter(r => !r.active);
   document.getElementById("robotCount").textContent = activeRobots.length;
   document.getElementById("robotCountBadge").textContent = activeRobots.length;
   document.getElementById("robotCountBadge").className = "count " + (activeRobots.length ? "active" : "");
-  const robotsCard = document.getElementById("robotsCard");
-  robotsCard.classList.toggle("has-signals", activeRobots.length > 0);
 
+  const allRobots = [...activeRobots, ...closedRobots];
   let robotHtml = "";
-  for (const r of activeRobots) {
-    const interval = r.strike_interval ? "~" + Math.round(r.strike_interval) + "с" : "—";
-    // Data-driven fields for live second-updates
-    const dataAttrs = `data-t="${r.ticker}" data-ts="${r.last_update}" data-interval="${r.strike_interval}" data-price="${r.strike_price}" data-qty="${r.last_volume}" data-strikes="${r.strikes}"`;
-    robotHtml += `<div class="robot-row active" ${dataAttrs}>
-      <span class="ticker">${r.ticker}</span>
-      <span class="price">@ ${r.strike_price} · QTY ${r.last_volume} · ${r.strikes} уд.</span>
-      <span class="countdown">${Math.ceil(r.seconds_to_next || 0)}с</span>
-      <span class="interval">каждые ${interval} · <span class="badge-on">ACTIVE</span></span>
+  for (const r of allRobots) {
+    const lots = r.lots != null ? r.lots : (r.last_volume != null ? r.last_volume : "—");
+    const period = r.period != null ? Math.round(r.period) : (r.strike_interval ? Math.round(r.strike_interval) : "—");
+    const ops = r.operation_count != null ? r.operation_count : (r.strikes != null ? r.strikes : "—");
+    const first = r.first_operation_dttm || "—";
+    const last = r.last_operation_dttm || "—";
+    const next = r.next_operation_dttm || "—";
+    const price = r.strike_price != null ? r.strike_price.toFixed(2) : "—";
+    const dataAttrs = r.active
+      ? `data-t="${r.ticker}" data-ts="${r.last_update}" data-interval="${r.strike_interval}" data-sec="${Math.ceil(r.seconds_to_next || 0)}"`
+      : "";
+    const dir = (r.direction === "long") ? "🟢 LON" : (r.direction === "short") ? "🔴 SHR" : "—";
+    const dirClass = (r.direction === "long") ? "long" : (r.direction === "short") ? "short" : "";
+    const copyText = `${r.ticker} ${r.direction === "long" ? "BUY" : r.direction === "short" ? "SELL" : ""} @ ${price} период ${period}с лоты ${lots}`;
+    robotHtml += `<div class="robot-row ${r.active ? "active" : "closed"}" ${dataAttrs}>
+      <span class="col-ticker">${r.ticker}</span>
+      <span class="col-dir ${dirClass}">${dir}</span>
+      <span class="col-lots">${lots}</span>
+      <span class="col-period">${period}</span>
+      <span class="col-ops">${ops}</span>
+      <span class="col-first">${first}</span>
+      <span class="col-last">${last}</span>
+      <span class="col-next">${next}</span>
+      <span class="col-sec">${r.active ? Math.ceil(r.seconds_to_next || 0) : "—"}</span>
+      <span class="col-price">${price}</span>
+      <span class="col-status">${r.active ? '<span class="badge-on">ACTIVE</span>' : '<span class="badge-off">ОТКЛ</span>'}</span>
+      <span class="col-copy"><button class="copy-btn" data-copy="${copyText.replace(/"/g, '&quot;')}">⧉</button></span>
     </div>`;
   }
-  for (const r of closedRobots) {
-    const interval = r.strike_interval ? "~" + Math.round(r.strike_interval) + "с" : "—";
-    const dur = Math.round(r.duration_sec || 0);
-    robotHtml += `<div class="robot-row closed">
-      <span class="ticker">${r.ticker}</span>
-      <span class="price">@ ${r.strike_price} · QTY ${r.last_volume} · ${r.strikes} уд.</span>
-      <span class="countdown">—</span>
-      <span class="interval">каждые ${interval} · ${dur}с · <span class="badge-off">ОТКЛ</span></span>
-    </div>`;
-  }
-  document.getElementById("robotsBody").innerHTML = robotHtml || '<div class="no-signals">Роботы не обнаружены</div>';
+  document.getElementById("robotsBody").innerHTML = robotHtml ||
+    '<div class="no-signals">Роботы не обнаружены — скринер активен, обновляется каждые 5 с</div>';
+
+  // Copy buttons (event delegation)
+  document.getElementById("robotsBody").querySelectorAll(".copy-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      const text = this.getAttribute("data-copy");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          this.textContent = "✓";
+          this.classList.add("copied");
+          setTimeout(() => { this.textContent = "⧉"; this.classList.remove("copied"); }, 1500);
+        });
+      }
+    });
+  });
 
   // Arba
   const arba = data.arba || [];
@@ -446,6 +551,18 @@ function render(data) {
   grid.innerHTML = gridHtml;
 }
 
+// --- Tab switching (AnyScan-style nav) ---
+document.querySelectorAll(".nav-tab").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    var tabId = btn.dataset.tab;
+    document.querySelectorAll(".nav-tab").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    document.querySelectorAll(".tab-section").forEach(function(s) { s.classList.remove("active"); });
+    var target = document.getElementById("tab-" + tabId);
+    if (target) target.classList.add("active");
+  });
+});
+
 // --- Live data only — no demo fallback ---
 
 // Live second counter: update countdown every 1s like aniscan
@@ -458,14 +575,8 @@ setInterval(function() {
     var elapsed = now - lastTs;
     var remaining = interval - (elapsed % interval);
     if (remaining <= 0) remaining = interval;
-    var cd = Math.ceil(remaining);
-    var cdEl = row.querySelector(".countdown");
-    if (cdEl) cdEl.textContent = cd + "с";
-    // Update interval text with seconds
-    var intEl = row.querySelector(".interval");
-    if (intEl) {
-      intEl.innerHTML = "каждые ~" + Math.round(interval) + "с · " + cd + "с до удара · <span class=\"badge-on\">ACTIVE</span>";
-    }
+    var secEl = row.querySelector(".col-sec");
+    if (secEl) secEl.textContent = Math.ceil(remaining) + "с";
   });
 }, 1000);
 
@@ -516,15 +627,6 @@ if (location.protocol === "file:") {
   const hint = document.getElementById("statusText");
   hint.textContent = "FILE MODE — перетащите сюда data/screener.json или откройте через http://localhost:8080";
 }
-
-// Countdown refresh for robots every second
-setInterval(() => {
-  // Robots with next_strike_estimate get their countdown decremented locally
-  document.querySelectorAll(".robot-row .countdown").forEach(el => {
-    const cur = parseInt(el.textContent);
-    if (!isNaN(cur) && cur > 1) el.textContent = (cur - 1) + "с";
-  });
-}, 1000);
 </script>
 </body>
 </html>

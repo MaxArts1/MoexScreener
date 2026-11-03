@@ -174,6 +174,7 @@ class TickerState:
     trade_times: list = field(default_factory=list)
     trade_volumes: list = field(default_factory=list)
     trade_prices: list = field(default_factory=list)
+    trade_buysell: list = field(default_factory=list)  # B/S per real trade (M08 direction)
     trade_gaps: list = field(default_factory=list)
     strike_gaps: list = field(default_factory=list)    # inter-strike gaps (10-60s robots)
     last_strikes: dict = field(default_factory=dict)  # {price_level: [ts1, ts2, ...]}
@@ -188,12 +189,13 @@ class TickerState:
         self.updates += 1
         self.last_update = datetime.now()
 
-    def push_trade(self, price, vol, ts):
+    def push_trade(self, price, vol, ts, buy_sell=""):
         self.last = price
         self.trade_times.append(ts)
         if vol:
             self.trade_volumes.append(vol)
             self.trade_prices.append(price)
+            self.trade_buysell.append(buy_sell or "S")
         # Track inter-trade gaps for M08 robot CV
         if len(self.trade_times) >= 2:
             self.trade_gaps.append(ts - self.trade_times[-2])
@@ -202,6 +204,7 @@ class TickerState:
             self.trade_volumes.pop(0)
             self.trade_prices.pop(0)
             self.trade_gaps.pop(0)
+            self.trade_buysell.pop(0)
         self.updates += 1
 
     # Backwards-compat alias
@@ -474,12 +477,14 @@ class M07_IcebergSingle(Module):
 
 # ---------------------------------------------------------------------------
 # M08 — Robots (with session tracking, DB, and countdown)
-# Robots repeat minimal-size orders every 10–60 sec near the spread
+# Robots repeat minimal-size orders every 6–90 sec near the spread,
+# and must survive at least ROBOT_MIN_LIFETIME_MIN minutes.
 # ---------------------------------------------------------------------------
-ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "10"))
-ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "60"))
+ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "6"))
+ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "90"))
 ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "3"))
 ROBOT_QTY_MAX_FACTOR = float(os.getenv("ROBOT_QTY_MAX_FACTOR", "2.0"))  # strike qty <= factor x ticker median
+ROBOT_MIN_LIFETIME_MIN = float(os.getenv("ROBOT_MIN_LIFETIME_MIN", "10"))  # min survival time (minutes)
 
 @dataclass
 class RobotSession:
@@ -497,6 +502,7 @@ class RobotSession:
     active: bool = True
     _strike_ts: list = field(default_factory=list)
     lot_size: int = 1           # MOEX lot size for ticker
+    direction: str = "flat"     # "long", "short", or "flat"
 
     @property
     def price_move(self) -> float:
@@ -575,6 +581,7 @@ class RobotSession:
             "next_operation_dttm": self.next_operation_dttm,
             "lot_in_minute": self.lot_in_minute,
             "seconds_to_next": round(self.compute_next_strike(), 1) if self.active else 0,
+            "direction": self.direction,
         }
 
 
@@ -591,12 +598,17 @@ class M08_Robots(Module):
         self._load_db()
 
     def _load_db(self):
-        """Load robot sessions from JSON DB."""
+        """Load robot sessions from JSON DB (discard records older than 30 min)."""
         if os.path.exists(self._db_file):
             try:
                 with open(self._db_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                now = time.time()
                 for r in data.get("robots", []):
+                    last_update = r.get("last_update", 0)
+                    # Keep only sessions updated within the last 30 minutes
+                    if now - last_update > 1800:
+                        continue
                     key = f"{r['ticker']}@{r.get('strike_price', 0)}"
                     if key not in self.sessions:
                         s = RobotSession(
@@ -612,26 +624,31 @@ class M08_Robots(Module):
                         s.last_price = r.get("last_price", 0)
                         s.last_volume = r.get("last_volume", 0)
                         s.last_update = r.get("last_update", 0)
+                        s.direction = r.get("direction", "flat")
                         self.sessions[key] = s
             except Exception as e:
                 print(f"[M08] DB load error: {e}")
 
     def _save_db(self, force: bool = False):
-        """Persist robot sessions to JSON DB (throttled to 30s)."""
+        """Persist robot sessions to JSON DB (throttled to 30s).
+        Only sessions updated in the last 30 min are written."""
         if not force and time.time() - self._last_db_write < 30:
             return
+        now = time.time()
+        fresh = [s.to_dict() for s in self.sessions.values()
+                 if now - s.last_update < 1800]
         try:
             payload = {
-                "updated_at": time.time(),
-                "robots": [s.to_dict() for s in self.sessions.values()],
+                "updated_at": now,
+                "robots": fresh,
             }
             os.makedirs(self._db_dir, exist_ok=True)
             tmp = os.path.join(self._db_dir, "robots.json.tmp")
             final = os.path.join(self._db_dir, "robots.json")
             with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
+                json.dump(payload, f, indent=2, ensure_ascii=False)
             os.replace(tmp, final)
-            self._last_db_write = time.time()
+            self._last_db_write = now
         except Exception as e:
             print(f"[M08] DB save error: {e}")
 
@@ -717,14 +734,27 @@ class M08_Robots(Module):
                     lo = s.bid - zone
                     hi = s.ask + zone
                     if not (lo <= price <= hi):
-                        print(f"[M08 DEBUG] {t}@{price}: spread zone miss, bid={s.bid}, ask={s.ask}, zone={zone:.4f}, lo={lo:.4f}, hi={hi:.4f}")
                         continue
+
+                # Direction: majority BUYSELL at this price level
+                # ("B" = buy aggressive → robot lifting (long); "S" = sell → pressing (short))
+                bs_flags = [s.trade_buysell[i] for i in range(len(s.trade_buysell))
+                            if s.trade_prices[i] == price]
+                if bs_flags:
+                    buys = sum(1 for b in bs_flags if b == "B")
+                    sells = sum(1 for b in bs_flags if b == "S")
+                    sess_dir = "long" if buys > sells else ("short" if sells > buys else "flat")
+                else:
+                    sess_dir = "flat"
 
                 # Robot confirmed — create/update session
                 key = f"{t}@{price}"
                 sess = self.sessions.get(key)
                 is_new = False
                 if sess is None or not sess.active:
+                    # Create session: detected_at = oldest observed strike.
+                    # Start as inactive (provisional); promoted to active after
+                    # ROBOT_MIN_LIFETIME_MIN of continuous tracking.
                     sess = RobotSession(
                         ticker=t,
                         detected_at=ts_list[0],
@@ -733,8 +763,12 @@ class M08_Robots(Module):
                         start_volume=int(med_qty),
                         lot_size=LOT_SIZES.get(t, 1),
                     )
+                    sess.direction = sess_dir
+                    sess.active = False  # provisional until min lifetime reached
                     self.sessions[key] = sess
                     is_new = True
+                else:
+                    sess.direction = sess_dir
 
                 sess._strike_ts = ts_list[-20:]
                 sess.strikes = len(ts_list)
@@ -742,13 +776,22 @@ class M08_Robots(Module):
                 sess.last_update = ts_list[-1]
                 sess.last_price = price
                 sess.last_volume = int(med_qty)
-                sess.active = True
+
+                # Promote provisional → active once min lifetime is reached
+                if sess.duration_sec >= ROBOT_MIN_LIFETIME_MIN * 60:
+                    sess.active = True
+                else:
+                    # Still below min lifetime — keep provisional, don't emit signal
+                    sess.next_strike_estimate = sess.compute_next_strike()
+                    continue
+
                 sess.next_strike_estimate = sess.compute_next_strike()
 
                 text = (
+                    f"{'🟢 LON' if sess.direction == 'long' else '🔴 SHR'} "
                     f"{len(ts_list)} ударов @ {price:.2f}, "
                     f"каждые ~{sess.strike_interval:.0f}s, "
-                    f"QTY={int(med_qty)}, в работе {int(sess.duration_sec)}s"
+                    f"QTY={int(med_qty)}, в работе {int(sess.duration_sec // 60)} мин"
                 )
                 out.append(Signal(
                     self.name, t, round(med_gap, 1),
@@ -758,6 +801,14 @@ class M08_Robots(Module):
                 if is_new:
                     new_alerts.append(key)
                     self._maybe_alert_sound(t, is_new=True)
+
+        # Purge stale sessions (not updated for 30 min) — keeps DB fresh
+        now = time.time()
+        for key in list(self.sessions.keys()):
+            sess = self.sessions[key]
+            if now - sess.last_update > 1800:
+                del self.sessions[key]
+                print(f"[M08] purged stale session {key}")
 
         # Close sessions for prices no longer observed in recent trades
         for key, sess in list(self.sessions.items()):
@@ -1300,9 +1351,9 @@ class ScreenerEngine:
                 st.push_trade(st.last, qty or 0.0, ts)
 
         # Step 2: Fetch trades for all equities (parallel) - but only if we have enough trade history
-        # M08: fetch real trades (every cycle, 20 trades per ticker)
+        # M08: fetch real trades (every cycle, 100 trades per ticker to cover ~15-20 min)
         def fetch_trades(t):
-            return t, _fetch_trades_rest(t, limit=20)
+            return t, _fetch_trades_rest(t, limit=100)
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             trades_results = list(executor.map(fetch_trades, self.equities))
@@ -1312,7 +1363,7 @@ class ScreenerEngine:
             if not st:
                 continue
             for rt in real_trades:
-                st.push_trade(rt["price"], rt["qty"], rt["ts"])
+                st.push_trade(rt["price"], rt["qty"], rt["ts"], rt.get("buy_sell", ""))
 
         # M10 Arba: fetch paired tickers and update spread (parallel)
         def fetch_arba_pair(pair):
