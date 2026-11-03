@@ -1,9 +1,11 @@
 # MOEX Screener v3.1 — Docker Compose
 # Usage: docker compose up --build
+#        then open http://localhost:8080/dashboard.html
 #
 # Mounts:
 #   ./robot_db  →  /app/robot_db  (persist robot sessions between runs)
-#   ./.env      →  /app/.env      (optional: real tickers, MOEX key, etc.)
+# Optional:
+#   ./.env      →  loaded as env_file when present (EQUITIES, thresholds, ...)
 
 services:
   screener:
@@ -11,18 +13,17 @@ services:
     image: moex-screener:latest
     container_name: moex-screener
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
-      - TZ=Asia/Volgograd
+      - TZ=Europe/Moscow
       - RENDER_SEC=5
-      - SOUND_ALERT_ENABLED=false   # enable sound in container (needs /dev/tty or pulse)
-      # Override any of these in .env on the host:
-      # EQUITIES, FUTURES, ARBA_PAIRS, ICEBERG_*
+      - SOUND_ALERT_ENABLED=false   # no audio device in the container
+      - ROBOT_DB_DIR=/app/robot_db
     volumes:
       - ./robot_db:/app/robot_db
-      - ./.env:/app/.env:ro
-    # Uncomment to tail the log:
-    # logging:
-    #   driver: json-file
-    #   options:
-    #     max-size: "10m"
-    #     max-file: "3"
+    # Optional overrides; `required: false` needs Docker Compose 2.24+.
+    # On older versions create an empty .env or delete this block.
+    env_file:
+      - path: .env
+        required: false

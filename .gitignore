@@ -2,4 +2,6 @@ __pycache__/
 *.pyc
 .env
 robot_db/
+live.log
+live.pid
 .m7/cycles/*.json.tmp

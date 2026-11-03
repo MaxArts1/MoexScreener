@@ -409,7 +409,7 @@ function render(data) {
   const now = Date.now();
   const fresh = (now - data.ts * 1000) < 15000;
   document.getElementById("statusDot").className = "dot " + (fresh ? "live" : "stale");
-  document.getElementById("statusText").textContent = fresh ? "LIVE" : "СТАРОЕ ДАННЫЕ";
+  document.getElementById("statusText").textContent = fresh ? "LIVE" : "ДАННЫЕ УСТАРЕЛИ";
   document.getElementById("lastUpdate").textContent = data.time || "";
   document.getElementById("footerTs").textContent = "Обновлено: " + data.time + " · автообновление каждые 5 с";
 
@@ -464,7 +464,8 @@ function render(data) {
     </div>`;
   }
   document.getElementById("robotsBody").innerHTML = robotHtml ||
-    '<div class="no-signals">Роботы не обнаружены — скринер активен, обновляется каждые 5 с</div>';
+    '<div class="no-signals">Роботы не обнаружены. Скринер активен; сессия появляется после ' +
+    '10 минут непрерывной работы робота по одной цене.</div>';
 
   // Copy buttons (event delegation)
   document.getElementById("robotsBody").querySelectorAll(".copy-btn").forEach(btn => {
@@ -500,7 +501,10 @@ function render(data) {
 
   // Price grid
   const states = data.states || {};
-  const tickers = Object.keys(states).filter(t => !/^(SBERP|GAZPP|VTBRP|TATNP|SIU6|BRU6|GDH6|MEU6)$/.test(t));
+  const FUTURES_RE = /^[A-Z]{2,4}[FGHJKMNQUVXZ]\d$/; // SIU6, BRU6, ...
+  const tickers = Object.keys(states).filter(
+    t => !/^(SBERP|GAZPP|VTBRP|TATNP)$/.test(t) && !FUTURES_RE.test(t)
+  );
   let priceHtml = "";
   for (const t of tickers) {
     const st = states[t];
@@ -508,7 +512,6 @@ function render(data) {
     const bid = st.bid != null ? st.bid.toFixed(2) : "—";
     const ask = st.ask != null ? st.ask.toFixed(2) : "—";
     const dayVol = st.day_volume ? fmtNum(st.day_volume) + " шт" : "—";
-    const up = st.last >= 0; // we don't track open/prev here, use class neutrally
     priceHtml += `<div class="price-cell">
       <div class="ticker">${t}</div>
       <div class="last">${st.last.toFixed(2)}</div>
@@ -523,8 +526,9 @@ function render(data) {
   let gridHtml = "";
   for (const mod of MODULES) {
     const signals = byModule[mod] || [];
-    const isRobots = mod.includes("M08");
-    const isArba = mod.includes("M10");
+    // Module names are Russian ("М8 ..."), so match on the Cyrillic prefix
+    const isRobots = mod.startsWith("М8");
+    const isArba = mod.startsWith("М10");
     if (isRobots || isArba) continue; // shown in special sections above
     if (!signals.length) continue;
     const maxSev = Math.max(...signals.map(s => s.severity));
