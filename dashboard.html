@@ -353,12 +353,13 @@ function render(data) {
 
   let robotHtml = "";
   for (const r of activeRobots) {
-    const cd = r.next_strike_estimate > 0 ? Math.ceil(r.next_strike_estimate) + "с" : "—";
     const interval = r.strike_interval ? "~" + Math.round(r.strike_interval) + "с" : "—";
-    robotHtml += `<div class="robot-row active">
+    // Data-driven fields for live second-updates
+    const dataAttrs = `data-t="${r.ticker}" data-ts="${r.last_update}" data-interval="${r.strike_interval}" data-price="${r.strike_price}" data-qty="${r.last_volume}" data-strikes="${r.strikes}"`;
+    robotHtml += `<div class="robot-row active" ${dataAttrs}>
       <span class="ticker">${r.ticker}</span>
       <span class="price">@ ${r.strike_price} · QTY ${r.last_volume} · ${r.strikes} уд.</span>
-      <span class="countdown">${cd}</span>
+      <span class="countdown">${Math.ceil(r.seconds_to_next || 0)}с</span>
       <span class="interval">каждые ${interval} · <span class="badge-on">ACTIVE</span></span>
     </div>`;
   }
@@ -445,23 +446,29 @@ function render(data) {
   grid.innerHTML = gridHtml;
 }
 
-async function poll() {
-  try {
-    const url = "./data/screener.json?t=" + Date.now();
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    if (data.ts !== lastTs) {
-      lastTs = data.ts;
-      render(data);
-    }
-  } catch (e) {
-    document.getElementById("statusDot").className = "dot stale";
-    document.getElementById("statusText").textContent = "Нет данных (" + e.message + ")";
-  }
-}
+// --- Live data only — no demo fallback ---
 
-// Poll every 5s
+// Live second counter: update countdown every 1s like aniscan
+setInterval(function() {
+  document.querySelectorAll(".robot-row.active").forEach(function(row) {
+    var lastTs = parseFloat(row.dataset.ts);
+    var interval = parseFloat(row.dataset.interval);
+    if (!lastTs || !interval) return;
+    var now = Date.now() / 1000;
+    var elapsed = now - lastTs;
+    var remaining = interval - (elapsed % interval);
+    if (remaining <= 0) remaining = interval;
+    var cd = Math.ceil(remaining);
+    var cdEl = row.querySelector(".countdown");
+    if (cdEl) cdEl.textContent = cd + "с";
+    // Update interval text with seconds
+    var intEl = row.querySelector(".interval");
+    if (intEl) {
+      intEl.innerHTML = "каждые ~" + Math.round(interval) + "с · " + cd + "с до удара · <span class=\"badge-on\">ACTIVE</span>";
+    }
+  });
+}, 1000);
+
 async function poll() {
   try {
     const url = "./data/screener.json?t=" + Date.now();
@@ -471,11 +478,13 @@ async function poll() {
     if (data.ts !== lastTs) {
       lastTs = data.ts;
       render(data);
+      document.getElementById("statusDot").className = "dot live";
+      document.getElementById("statusText").textContent = "LIVE";
     }
   } catch (e) {
-    // Fallback: try loading via file:// (user must drag&drop JSON or open via http)
     document.getElementById("statusDot").className = "dot stale";
-    document.getElementById("statusText").textContent = "Нет доступа к data/screener.json";
+    document.getElementById("statusText").textContent = "ОШИБКА: нет данных — запускать через http://localhost:8080";
+    document.getElementById("robotCountBadge").textContent = "0";
   }
 }
 poll();

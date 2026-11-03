@@ -1,79 +1,276 @@
 {
- "ts": 1793636734.5482228,
- "time": "2026-11-02 19:25:34",
- "signals": [],
+ "ts": 1793648915.51383,
+ "time": "2026-11-02 22:48:35",
+ "signals": [
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "SBER",
+   "value": 10785250759.0,
+   "text": "day value 10,785,250,759 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "GAZP",
+   "value": 8867688481.0,
+   "text": "day value 8,867,688,481 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "LKOH",
+   "value": 7761525446.0,
+   "text": "day value 7,761,525,446 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "VTBR",
+   "value": 4618069900.0,
+   "text": "day value 4,618,069,900 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "ROSN",
+   "value": 3537122222.0,
+   "text": "day value 3,537,122,222 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "MGNT",
+   "value": 1891909438.0,
+   "text": "day value 1,891,909,438 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "TATN",
+   "value": 1884194559.0,
+   "text": "day value 1,884,194,559 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "GMKN",
+   "value": 1666205522.0,
+   "text": "day value 1,666,205,522 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М1 Кто торгуется",
+   "ticker": "SNGS",
+   "value": 730610342.0,
+   "text": "day value 730,610,342 RUB",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "VTBR",
+   "value": 82063116.0,
+   "text": "крупные деньги: 82,063,116 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "GAZP",
+   "value": 76525270.0,
+   "text": "крупные деньги: 76,525,270 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "SNGS",
+   "value": 40864800.0,
+   "text": "крупные деньги: 40,864,800 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "SBER",
+   "value": 36881393.0,
+   "text": "крупные деньги: 36,881,393 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "GMKN",
+   "value": 14617790.0,
+   "text": "крупные деньги: 14,617,790 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "ROSN",
+   "value": 9323282.0,
+   "text": "крупные деньги: 9,323,282 шт за день",
+   "severity": 5
+  },
+  {
+   "module": "М10 Арбитраж",
+   "ticker": "SBER/SBERP",
+   "value": -0.28,
+   "text": "ОТРИЦАТЕЛЬНЫЙ СПРЕД -0.2800",
+   "severity": 5
+  },
+  {
+   "module": "М6 Айсберг-радар",
+   "ticker": "VTBR",
+   "value": 4.8,
+   "text": "x4.8 объём, цена не двигается",
+   "severity": 3
+  },
+  {
+   "module": "М11 След алгоритма",
+   "ticker": "TATN",
+   "value": 4.185,
+   "text": "в работе 1323s, 621.2 → 647.2, объём 235",
+   "severity": 3
+  },
+  {
+   "module": "М12 Скальпинг",
+   "ticker": "VTBR",
+   "value": 3.8,
+   "text": "x3.8 от плана (1,000 шт)",
+   "severity": 3
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "TATN",
+   "value": 2987912.0,
+   "text": "крупные деньги: 2,987,912 шт за день",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "ROSN",
+   "value": 0.05,
+   "text": "spread 0.0500 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "GAZP",
+   "value": 0.04,
+   "text": "spread 0.0400 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "GMKN",
+   "value": 0.02,
+   "text": "spread 0.0200 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "SBER",
+   "value": 0.01,
+   "text": "spread 0.0100 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "VTBR",
+   "value": 0.01,
+   "text": "spread 0.0100 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М5 Толстые уровни",
+   "ticker": "SNGS",
+   "value": 0.005,
+   "text": "spread 0.0050 (thin)",
+   "severity": 2
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "LKOH",
+   "value": 1259788.0,
+   "text": "крупные деньги: 1,259,788 шт за день",
+   "severity": 1
+  },
+  {
+   "module": "М15 Крупные деньги",
+   "ticker": "MGNT",
+   "value": 1017218.0,
+   "text": "крупные деньги: 1,017,218 шт за день",
+   "severity": 1
+  }
+ ],
  "states": {
   "SBER": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 290.99,
+   "bid": 290.99,
+   "ask": 291.0,
+   "day_volume": 36881393.0,
+   "day_value": 10785250759.0,
+   "updates": 200090
   },
   "GAZP": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 116.9,
+   "bid": 114.76,
+   "ask": 114.8,
+   "day_volume": 76525270.0,
+   "day_value": 8867688481.0,
+   "updates": 215090
   },
   "LKOH": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 6099.5,
+   "bid": 6099.5,
+   "ask": 6100.0,
+   "day_volume": 1259788.0,
+   "day_value": 7761525446.0,
+   "updates": 205088
   },
   "VTBR": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 57.07,
+   "bid": 55.54,
+   "ask": 55.55,
+   "day_volume": 82063116.0,
+   "day_value": 4618069900.0,
+   "updates": 215088
   },
   "MGNT": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 1862.0,
+   "bid": 1794.5,
+   "ask": 1795.0,
+   "day_volume": 1017218.0,
+   "day_value": 1891909438.0,
+   "updates": 205090
   },
   "ROSN": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 384.45,
+   "bid": 372.8,
+   "ask": 372.85,
+   "day_volume": 9323282.0,
+   "day_value": 3537122222.0,
+   "updates": 210086
   },
   "GMKN": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 114.5,
+   "bid": 113.38,
+   "ask": 113.4,
+   "day_volume": 14617790.0,
+   "day_value": 1666205522.0,
+   "updates": 215086
   },
   "TATN": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 647.2,
+   "bid": 621.6,
+   "ask": 621.8,
+   "day_volume": 2987912.0,
+   "day_value": 1884194559.0,
+   "updates": 210090
   },
   "SNGS": {
-   "last": null,
-   "bid": null,
-   "ask": null,
-   "day_volume": null,
-   "day_value": null,
-   "updates": 0
+   "last": 18.165,
+   "bid": 17.57,
+   "ask": 17.575,
+   "day_volume": 40864800.0,
+   "day_value": 730610342.0,
+   "updates": 215088
   },
   "PLZT": {
    "last": null,
@@ -121,9 +318,9 @@
    "pair": "SBER/SBERP",
    "pair_a": "SBER",
    "pair_b": "SBERP",
-   "spread": null,
-   "fair": null,
-   "z_score": null
+   "spread": -0.2799999999999727,
+   "fair": -0.2589999999999918,
+   "z_score": -0.5990228006541928
   },
   {
    "pair": "GAZP/GAZPP",
@@ -145,9 +342,9 @@
    "pair": "TATN/TATNP",
    "pair_a": "TATN",
    "pair_b": "TATNP",
-   "spread": null,
-   "fair": null,
-   "z_score": null
+   "spread": 13.699999999999932,
+   "fair": 13.679999999999973,
+   "z_score": 0.10050378152571456
   }
  ],
  "robots": []

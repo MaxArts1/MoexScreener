@@ -81,6 +81,13 @@ ARBA_PAIRS = [
     ("TATN", "TATNP"),
 ]
 
+# MOEX lot sizes (shares per lot) — used to convert QTY → lots
+LOT_SIZES = {
+    "SBER": 1, "GAZP": 1, "LKOH": 1, "VTBR": 1, "MGNT": 1,
+    "ROSN": 1, "GMKN": 1, "TATN": 1, "SNGS": 1, "PLZT": 1,
+    "SBERP": 1, "GAZPP": 1, "VTBRP": 1, "TATNP": 1,
+}
+
 # Trace (M11) session thresholds
 TRACE_VOLUME_RATIO = 2.0   # volume spike ratio to open a session
 TRACE_PRICE_TOLERANCE = 0.005
@@ -98,6 +105,10 @@ SPREAD_ALERT_THRESHOLD = _env_float("SPREAD_ALERT_THRESHOLD", 0.3)
 # Robot DB (M08 v2)
 ROBOT_DB_DIR = os.getenv("ROBOT_DB_DIR", "E:/Deepseek/ReTools/moex-screener/robot_db")
 SOUND_ALERT_ENABLED = os.getenv("SOUND_ALERT_ENABLED", "true").lower() == "true"
+
+# Spread zone multiplier: how far outside bid/ask to consider "near the spread"
+# For wide-spread tickers (ROSN, TATN, SNGS), use a larger zone
+SPREAD_ZONE_FACTOR = float(os.getenv("SPREAD_ZONE_FACTOR", "5.0"))
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +203,9 @@ class TickerState:
             self.trade_prices.pop(0)
             self.trade_gaps.pop(0)
         self.updates += 1
+
+    # Backwards-compat alias
+    push_trade_point = push_trade
 
     def set_book(self, bid, ask, bid_sizes, ask_sizes):
         self.bid = bid
@@ -469,29 +483,20 @@ ROBOT_QTY_MAX_FACTOR = float(os.getenv("ROBOT_QTY_MAX_FACTOR", "2.0"))  # strike
 
 @dataclass
 class RobotSession:
-    """Tracks one robot activity session (periodic minimal strikes)."""
+    """Tracks one robot activity session (periodic minimal strikes) — aniscan-compatible."""
     ticker: str
-    detected_at: float          # time when robot first detected
-    strike_price: float        # price level the robot works on
-    strike_interval: float = 0.0    # median interval between strikes (sec)
-    strikes: int = 0          # number of strikes observed
+    detected_at: float          # detection timestamp (unix)
+    strike_price: float         # price level the robot works on
+    strike_interval: float = 0.0     # median interval between strikes (sec) — period
+    strikes: int = 0            # number of strikes observed — operationCount
     start_price: float = 0.0
-    start_volume: float = 0.0
-    last_update: float = 0.0
+    start_volume: float = 0.0   # median lot size (shares) — lots
+    last_update: float = 0.0    # last strike timestamp — lastOperationDttm
     last_price: float = 0.0
     last_volume: float = 0.0
     active: bool = True
-    next_strike_estimate: float = 0.0  # seconds until next expected strike
     _strike_ts: list = field(default_factory=list)
-
-    def record(self, ts: float, price: float, vol: float):
-        self.last_update = ts
-        self.last_price = price
-        self.last_volume = vol
-        self.strikes += 1
-        self._strike_ts.append(ts)
-        if len(self._strike_ts) > 20:
-            self._strike_ts.pop(0)
+    lot_size: int = 1           # MOEX lot size for ticker
 
     @property
     def price_move(self) -> float:
@@ -503,6 +508,37 @@ class RobotSession:
     def duration_sec(self) -> float:
         return max(0.0, self.last_update - self.detected_at)
 
+    @property
+    def first_operation_dttm(self) -> str:
+        """HH:MM:SS of first strike (MSK)."""
+        from datetime import datetime, timezone, timedelta
+        msk_tz = timezone(timedelta(hours=3))
+        return datetime.fromtimestamp(self.detected_at, tz=msk_tz).strftime("%H:%M:%S")
+
+    @property
+    def last_operation_dttm(self) -> str:
+        """HH:MM:SS of last strike (MSK)."""
+        from datetime import datetime, timezone, timedelta
+        msk_tz = timezone(timedelta(hours=3))
+        return datetime.fromtimestamp(self.last_update, tz=msk_tz).strftime("%H:%M:%S")
+
+    @property
+    def next_operation_dttm(self) -> str:
+        """HH:MM:SS of next expected strike (MSK)."""
+        if self.strike_interval <= 0:
+            return "—"
+        from datetime import datetime, timezone, timedelta
+        msk_tz = timezone(timedelta(hours=3))
+        next_ts = self.last_update + self.strike_interval
+        return datetime.fromtimestamp(next_ts, tz=msk_tz).strftime("%H:%M:%S")
+
+    @property
+    def lot_in_minute(self) -> int:
+        """Volume per minute (shares/min) = 60/period * lot_size."""
+        if self.strike_interval <= 0 or self.start_volume <= 0:
+            return 0
+        return int((60.0 / self.strike_interval) * self.start_volume)
+
     def compute_next_strike(self) -> float:
         """Estimate seconds until next robot strike based on observed cadence."""
         if len(self._strike_ts) < 2:
@@ -513,13 +549,15 @@ class RobotSession:
         return max(0.0, median_gap - elapsed)
 
     def to_dict(self) -> dict:
+        # Convert start_volume (shares) to lots
+        lots = int(self.start_volume / self.lot_size) if self.lot_size > 0 else 0
         return {
             "ticker": self.ticker,
             "detected_at": self.detected_at,
             "last_update": self.last_update,
             "duration_sec": self.duration_sec,
             "strike_price": self.strike_price,
-            "strike_interval": self.strike_interval,
+            "strike_interval": round(self.strike_interval, 1),
             "strikes": self.strikes,
             "start_price": self.start_price,
             "start_volume": self.start_volume,
@@ -527,7 +565,16 @@ class RobotSession:
             "price_move_pct": round(self.price_move * 100, 4),
             "last_volume": self.last_volume,
             "active": self.active,
-            "next_strike_estimate": self.compute_next_strike(),
+            "next_strike_estimate": round(self.compute_next_strike(), 1),
+            # aniscan-compatible fields
+            "period": round(self.strike_interval, 1),
+            "lots": lots,
+            "operation_count": self.strikes,
+            "first_operation_dttm": self.first_operation_dttm,
+            "last_operation_dttm": self.last_operation_dttm,
+            "next_operation_dttm": self.next_operation_dttm,
+            "lot_in_minute": self.lot_in_minute,
+            "seconds_to_next": round(self.compute_next_strike(), 1) if self.active else 0,
         }
 
 
@@ -617,7 +664,7 @@ class M08_Robots(Module):
         ts_now = ctx.get("ts", time.time())
         new_alerts = []
 
-        # Robot detection uses REAL trade data from trades.json (MOEX ISS REST).
+# Robot detection uses REAL trade data from trades.json (MOEX ISS REST).
         # Pattern: same price struck ROBOT_MIN_REPEATS+ times
         # with inter-strike intervals in [ROBOT_STRIKE_MIN_SEC, ROBOT_STRIKE_MAX_SEC],
         # minimal QTY (<= ROBOT_QTY_MAX_FACTOR x median), within spread zone.
@@ -663,12 +710,14 @@ class M08_Robots(Module):
                 max_allowed = ticker_med * ROBOT_QTY_MAX_FACTOR if ticker_med > 0 else 100
                 if med_qty > max_allowed:
                     continue
-                # Spread zone check: price within [bid-2tick, ask+2tick]
-                if s.bid is not None and s.ask is not None:
-                    tick = max(0.001, (s.ask - s.bid) / 2.0)
-                    lo = s.bid - 2 * tick
-                    hi = s.ask + 2 * tick
+                # Spread zone check: price within [bid - zone, ask + zone]
+                # zone = SPREAD_ZONE_FACTOR x spread (covers wide-spread tickers)
+                if s.bid is not None and s.ask is not None and s.ask > s.bid:
+                    zone = SPREAD_ZONE_FACTOR * (s.ask - s.bid)
+                    lo = s.bid - zone
+                    hi = s.ask + zone
                     if not (lo <= price <= hi):
+                        print(f"[M08 DEBUG] {t}@{price}: spread zone miss, bid={s.bid}, ask={s.ask}, zone={zone:.4f}, lo={lo:.4f}, hi={hi:.4f}")
                         continue
 
                 # Robot confirmed — create/update session
@@ -682,6 +731,7 @@ class M08_Robots(Module):
                         strike_price=price,
                         start_price=price,
                         start_volume=int(med_qty),
+                        lot_size=LOT_SIZES.get(t, 1),
                     )
                     self.sessions[key] = sess
                     is_new = True
@@ -1222,8 +1272,17 @@ class ScreenerEngine:
 
     def _poll_rest_once(self):
         ts = time.time()
-        for t in self.equities:
-            data = _fetch_boardprice_rest(t, depth=5)
+        
+        # Step 1: Fetch boardprice for all equities (parallel)
+        import concurrent.futures
+        
+        def fetch_boardprice(t):
+            return t, _fetch_boardprice_rest(t, depth=5)
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            boardprice_results = list(executor.map(fetch_boardprice, self.equities))
+        
+        for t, data in boardprice_results:
             if not data:
                 continue
             st = self.states.setdefault(t, TickerState(t))
@@ -1232,31 +1291,43 @@ class ScreenerEngine:
             st.ask = data.get("ask")
             st.day_volume = data.get("day_volume")
             st.day_value = data.get("day_value")
-
-            # QTY = last trade volume (use it for M12)
+            
             qty = data.get("qty")
             st.volume = qty
-
+            
             if st.last is not None:
                 st.push_candle(ts, st.last, qty or 0.0)
-                # Simulate a trade for M08/M12 (REST only)
                 st.push_trade(st.last, qty or 0.0, ts)
 
-            # M08: fetch real trades (every cycle, 50 trades per ticker)
-            real_trades = _fetch_trades_rest(t, limit=50)
+        # Step 2: Fetch trades for all equities (parallel) - but only if we have enough trade history
+        # M08: fetch real trades (every cycle, 20 trades per ticker)
+        def fetch_trades(t):
+            return t, _fetch_trades_rest(t, limit=20)
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            trades_results = list(executor.map(fetch_trades, self.equities))
+        
+        for t, real_trades in trades_results:
+            st = self.states.get(t)
+            if not st:
+                continue
             for rt in real_trades:
                 st.push_trade(rt["price"], rt["qty"], rt["ts"])
 
-        # M10 Arba: fetch paired tickers and update spread
-        for a, b in self.arba_pairs:
+        # M10 Arba: fetch paired tickers and update spread (parallel)
+        def fetch_arba_pair(pair):
+            a, b = pair
             da = _fetch_boardprice_rest(a)
             db = _fetch_boardprice_rest(b)
-            la = da.get("last") if da else None
-            lb = db.get("last") if db else None
+            return a, b, da.get("last") if da else None, db.get("last") if db else None
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            arba_results = list(executor.map(fetch_arba_pair, self.arba_pairs))
+        
+        for a, b, la, lb in arba_results:
             if la is not None and lb is not None:
                 self.arba_module.update_pair(a, b, la, lb)
                 # Also update M11 trace sessions: if volume spike, open session
-                # (simplified: open session on volume > 2x history avg)
                 sa = self.states[a]
                 if sa.history:
                     vols = [v for _, _, v in sa.history[-10:] if v]
@@ -1267,10 +1338,11 @@ class ScreenerEngine:
                         else:
                             self.trace_module.feed_session(a, ts, la, sa.volume or 0)
 
-        # OI refresh
+        # OI refresh (every 5 min)
         if time.time() - self._last_oi_ts >= 300:
-            for f in self.futures:
-                oi = _fetch_oi_rest(f)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                oi_results = list(executor.map(_fetch_oi_rest, self.futures))
+            for f, oi in zip(self.futures, oi_results):
                 if oi is not None:
                     self.oi_module.set_oi(f, oi)
             self._last_oi_ts = time.time()
