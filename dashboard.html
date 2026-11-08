@@ -3,289 +3,402 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOEX Screener — Live Dashboard</title>
+<title>MOEX Screener — M08 Роботы</title>
 <style>
-:root {
-  --bg: #0d1117;
-  --card: #161b22;
-  --border: #30363d;
-  --text: #e6edf3;
-  --dim: #8b949e;
-  --green: #3fb950;
-  --red: #f85149;
-  --yellow: #d29922;
-  --blue: #58a6ff;
-  --purple: #bc8cff;
-  --orange: #f0883e;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  min-height: 100vh;
-}
-header {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-header h1 { font-size: 18px; font-weight: 600; }
-header .status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--dim);
-}
-.dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--dim);
-  animation: pulse 2s infinite;
-}
-.dot.live { background: var(--green); }
-.dot.stale { background: var(--yellow); animation: none; }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+    --danger: #da3633;
+  }
 
-/* Signal summary bar */
-.summary-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.summary-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
-}
-.summary-item .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
-.summary-item .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
-.summary-item .value.green { color: var(--green); }
-.summary-item .value.red { color: var(--red); }
-.summary-item .value.yellow { color: var(--yellow); }
-.summary-item .value.blue { color: var(--blue); }
+  .robot-subtabs { display: flex; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .robot-subtab {
+    padding: 4px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--dim); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .robot-subtab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .robot-subtab.blacklist.active { background: var(--danger); border-color: var(--danger); }
+  .robot-subtab .sub-count { opacity: 0.7; margin-left: 4px; }
 
-/* Grid of modules */
-.modules-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: 16px;
-}
-.module-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-.module-card.has-signals { border-color: var(--yellow); }
-.module-card.hot { border-color: var(--red); }
-.module-header {
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-}
-.module-header h3 { font-size: 14px; font-weight: 600; }
-.module-header .count {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--border);
-  color: var(--dim);
-}
-.module-header .count.active { background: var(--yellow); color: #000; }
-.module-header .count.hot { background: var(--red); color: #fff; }
-.module-body { padding: 0; }
-.module-body.collapsed { display: none; }
-.signal-row {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.signal-row:last-child { border-bottom: none; }
-.signal-ticker {
-  font-weight: 700;
-  min-width: 56px;
-  font-family: 'Consolas', monospace;
-}
-.signal-text { flex: 1; line-height: 1.4; }
-.signal-sev {
-  font-size: 11px;
-  color: var(--dim);
-  min-width: 24px;
-  text-align: right;
-}
-.sig-sev-5 .signal-ticker { color: var(--red); }
-.sig-sev-4 .signal-ticker { color: var(--orange); }
-.sig-sev-3 .signal-ticker { color: var(--yellow); }
-.sig-sev-2 .signal-ticker { color: var(--blue); }
-.sig-sev-1 .signal-ticker { color: var(--dim); }
+  .blacklist-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--dim); font-size: 12px; cursor: pointer; padding: 2px 6px;
+  }
+  .blacklist-btn:hover { color: var(--red); border-color: var(--red); }
+  .blacklist-btn.in-list { color: var(--red); border-color: var(--red); }
 
-/* No signals */
-.no-signals {
-  padding: 20px;
-  text-align: center;
-  color: var(--dim);
-  font-size: 13px;
-}
+  .blacklist-bar {
+    display: none; padding: 8px 16px; gap: 8px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid var(--danger); background: rgba(218,54,51,0.08);
+  }
+  .blacklist-bar.visible { display: flex; }
+  .blacklist-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--danger); color: #fff; border-radius: 12px;
+    padding: 2px 10px; font-size: 12px; font-weight: 700; font-family: 'Consolas', monospace;
+  }
+  .blacklist-chip button {
+    background: none; border: none; color: #fff; cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0; margin-left: 2px;
+  }
 
-/* Arba section */
-.arba-pair {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.arba-pair:last-child { border-bottom: none; }
-.arba-pair .pair-name { font-family: 'Consolas', monospace; font-weight: 600; font-size: 13px; min-width: 120px; }
-.arba-pair .pair-spread { font-size: 14px; font-weight: 700; }
-.arba-pair .pair-spread.negative { color: var(--red); }
-.arba-pair .pair-spread.positive { color: var(--green); }
-.arba-pair .pair-z { font-size: 11px; color: var(--dim); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--dim);
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    animation: pulse 2s infinite;
+  }
+  .dot.live { background: var(--green); }
+  .dot.stale { background: var(--yellow); animation: none; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-/* Robots section — AnyScan-style table */
-.robot-table-head,
-.robot-row {
-  padding: 10px 16px;
-  display: grid;
-  grid-template-columns: 90px 90px 60px 80px 70px 80px 80px 80px 90px 80px 90px 40px;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-}
-.robot-table-head {
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--dim);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.robot-table-head .col-sec { text-align: right; }
-.robot-row {
-  border-bottom: 1px solid var(--border);
-  font-family: 'Consolas', monospace;
-}
-.robot-row:last-child { border-bottom: none; }
-.robot-row.active { border-left: 3px solid var(--green); }
-.robot-row.closed { opacity: 0.55; border-left: 3px solid var(--border); }
-.robot-row .col-ticker { font-weight: 700; color: var(--blue); }
-.robot-row.closed .col-ticker { color: var(--dim); }
-.robot-row .col-sec { font-weight: 700; color: var(--yellow); text-align: right; }
-.robot-table-head .col-ticker,
-.robot-row .col-ticker { text-align: left; }
-.col-dir { text-align: center; font-weight: 700; }
-.col-dir.long { color: var(--green); }
-.col-dir.short { color: var(--red); }
-.col-copy { text-align: center; }
-.copy-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--dim);
-  font-size: 11px;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.copy-btn:hover { color: var(--blue); border-color: var(--blue); }
-.copy-btn.copied { color: var(--green); border-color: var(--green); }
-.col-lots, .col-period, .col-ops, .col-first, .col-last, .col-next, .col-price, .col-status { text-align: center; }
-.badge-on {
-  display: inline-block;
-  background: var(--green);
-  color: #000;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 8px;
-}
-.badge-off {
-  display: inline-block;
-  background: var(--border);
-  color: var(--dim);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 8px;
-}
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .summary-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .summary-item .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-item .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .summary-item .value.green { color: var(--green); }
+  .summary-item .value.red { color: var(--red); }
+  .summary-item .value.yellow { color: var(--yellow); }
+  .summary-item .value.blue { color: var(--blue); }
 
-/* Nav tabs (AnyScan style) */
-.nav-tabs {
-  display: flex;
-  gap: 0;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  position: sticky;
-  top: 54px;
-  z-index: 99;
-}
-.nav-tab {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--dim);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.nav-tab:hover { color: var(--text); }
-.nav-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-.tab-section { display: none; }
-.tab-section.active { display: block; }
+  /* Toolbar above robots table */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding: 10px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .toolbar input[type="search"] {
+    flex: 1;
+    min-width: 200px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .toolbar input[type="search"]::placeholder { color: var(--dim); }
+  .toolbar select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .toolbar button {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .toolbar button:hover { border-color: var(--blue); }
+  .toolbar button.primary { background: var(--blue); color: #000; border-color: var(--blue); }
+  .toolbar button.primary:hover { background: #79c0ff; }
+  .toolbar button.active { background: var(--green); color: #000; border-color: var(--green); }
+  .toolbar button.paused { background: var(--orange); color: #000; border-color: var(--orange); }
+  .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); }
+  .switch input { width: 0; height: 0; opacity: 0; }
+  .switch-slider {
+    width: 36px; height: 20px; background: var(--border); border-radius: 10px;
+    position: relative; cursor: pointer;
+  }
+  .switch-slider::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; transition: transform .2s;
+  }
+  .switch input:checked + .switch-slider { background: var(--green); }
+  .switch input:checked + .switch-slider::after { transform: translateX(16px); }
 
-/* Price grid */
-.price-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-  margin-top: 16px;
-}
-.price-cell {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 12px;
-}
-.price-cell .ticker { font-weight: 700; font-size: 13px; font-family: 'Consolas', monospace; }
-.price-cell .last { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
-.price-cell .bid-ask { font-size: 11px; color: var(--dim); font-family: 'Consolas', monospace; }
-.price-cell .day-vol { font-size: 11px; color: var(--dim); margin-top: 4px; }
-.price-cell.up .last { color: var(--green); }
-.price-cell.down .last { color: var(--red); }
+  .module-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .module-header {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .module-header h3 { font-size: 14px; font-weight: 600; }
+  .module-header .count {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--border);
+    color: var(--dim);
+  }
+  .module-header .count.active { background: var(--yellow); color: #000; }
+  .module-header .count.hot { background: var(--red); color: #fff; }
+  .module-body { padding: 0; }
+  .module-body.collapsed { display: none; }
+  .signal-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .signal-row:last-child { border-bottom: none; }
+  .signal-ticker {
+    font-weight: 700;
+    min-width: 56px;
+    font-family: 'Consolas', monospace;
+  }
+  .signal-text { flex: 1; line-height: 1.4; }
+  .signal-sev {
+    font-size: 11px;
+    color: var(--dim);
+    min-width: 24px;
+    text-align: right;
+  }
+  .sig-sev-5 .signal-ticker { color: var(--red); }
+  .sig-sev-4 .signal-ticker { color: var(--orange); }
+  .sig-sev-3 .signal-ticker { color: var(--yellow); }
+  .sig-sev-2 .signal-ticker { color: var(--blue); }
+  .sig-sev-1 .signal-ticker { color: var(--dim); }
 
-/* Timestamp */
-.ts { font-size: 12px; color: var(--dim); margin-top: 16px; text-align: center; }
+  .no-signals {
+    padding: 20px;
+    text-align: center;
+    color: var(--dim);
+    font-size: 13px;
+  }
+
+  .arba-pair {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .arba-pair:last-child { border-bottom: none; }
+  .arba-pair .pair-name { font-family: 'Consolas', monospace; font-weight: 600; font-size: 13px; min-width: 120px; }
+  .arba-pair .pair-spread { font-size: 14px; font-weight: 700; }
+  .arba-pair .pair-spread.negative { color: var(--red); }
+  .arba-pair .pair-spread.positive { color: var(--green); }
+  .arba-pair .pair-z { font-size: 11px; color: var(--dim); }
+
+  .robot-table-head,
+  .robot-row {
+    padding: 10px 16px;
+    display: grid;
+    grid-template-columns: 90px 90px 60px 80px 70px 80px 80px 80px 90px 80px 90px 40px 36px;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .robot-table-head {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .robot-table-head .col-sec { text-align: right; }
+  .robot-table-head .sortable:hover { color: var(--text); }
+  .robot-table-head .sort-dir { opacity: 0.5; font-size: 10px; margin-left: 2px; }
+  .robot-row {
+    border-bottom: 1px solid var(--border);
+    font-family: 'Consolas', monospace;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .robot-row:hover { background: rgba(88,166,255,0.06); }
+  .robot-row:last-child { border-bottom: none; }
+  .robot-row.active { border-left: 3px solid var(--green); }
+  .robot-row.closed { opacity: 0.55; border-left: 3px solid var(--border); }
+  .robot-row .col-ticker { font-weight: 700; color: var(--blue); }
+  .robot-row.closed .col-ticker { color: var(--dim); }
+  .robot-row .col-sec { font-weight: 700; color: var(--yellow); text-align: right; }
+  .robot-table-head .col-ticker,
+  .robot-row .col-ticker { text-align: left; }
+  .col-dir { text-align: center; font-weight: 700; }
+  .col-dir.long { color: var(--green); }
+  .col-dir.short { color: var(--red); }
+  .col-copy { text-align: center; }
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--dim);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .copy-btn:hover { color: var(--blue); border-color: var(--blue); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+  .col-lots, .col-period, .col-ops, .col-first, .col-last, .col-next, .col-price, .col-status { text-align: center; }
+  .badge-on {
+    display: inline-block;
+    background: var(--green);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+  .badge-off {
+    display: inline-block;
+    background: var(--border);
+    color: var(--dim);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+
+  .nav-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    position: sticky;
+    top: 54px;
+    z-index: 99;
+  }
+  .nav-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--dim);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+
+  .price-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .price-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .price-cell .ticker { font-weight: 700; font-size: 13px; font-family: 'Consolas', monospace; }
+  .price-cell .last { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+  .price-cell .bid-ask { font-size: 11px; color: var(--dim); font-family: 'Consolas', monospace; }
+  .price-cell .day-vol { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+  .ts { font-size: 12px; color: var(--dim); margin-top: 16px; text-align: center; }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 16px;
+  }
+
+  /* Robot detail row (expanded) */
+  .robot-detail {
+    background: rgba(22,27,34,0.6);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .robot-detail .detail-row { margin: 4px 0; display: flex; gap: 16px; }
+  .robot-detail .k { color: var(--blue); font-weight: 600; min-width: 120px; }
+  .robot-detail .v { font-family: 'Consolas', monospace; }
+  .robot-row.expanded { background: rgba(88,166,255,0.12); }
+
+  .new-robot-badge {
+    animation: blink 1s infinite;
+    color: var(--green);
+  }
+  @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0.4; } }
+
+  /* CSV export hint */
+  .csv-hint { font-size: 11px; color: var(--dim); margin-top: 2px; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📊 MOEX Screener v3.1</h1>
+  <h1>📊 MOEX Screener — M08 Роботы</h1>
   <div class="status">
     <div class="dot" id="statusDot"></div>
     <span id="statusText">Подключение…</span>
@@ -293,7 +406,6 @@ header .status {
   </div>
 </header>
 
-<!-- AnyScan-style nav tabs -->
 <nav class="nav-tabs" id="navTabs">
   <button class="nav-tab active" data-tab="robots">🤖 Роботы</button>
   <button class="nav-tab" data-tab="activity">📈 Активность</button>
@@ -302,7 +414,6 @@ header .status {
 </nav>
 
 <div class="container">
-  <!-- Summary bar -->
   <div class="summary-bar" id="summaryBar">
     <div class="summary-item"><div class="label">Сигналов</div><div class="value" id="sigCount">—</div></div>
     <div class="summary-item"><div class="label">Критичных</div><div class="value red" id="critCount">—</div></div>
@@ -310,26 +421,56 @@ header .status {
     <div class="summary-item"><div class="label">Arba (отр. спред)</div><div class="value" id="arbaCount">—</div></div>
   </div>
 
-  <!-- TAB: Robots (M08) -->
   <div class="tab-section active" id="tab-robots">
     <div class="module-card" style="margin-bottom:16px;">
       <div class="module-header">
-        <h3>🤖 M08 — Роботы (радар) · 6–90с периодичность · мин. жизнь 10 мин</h3>
+        <h3>🤖 M08 — Роботы (радар) · 3–120с периодичность · мин. жизнь 1 мин</h3>
         <span class="count" id="robotCountBadge">0</span>
       </div>
-      <div class="robot-table-head">
-        <span class="col-ticker">Инструмент</span>
-        <span class="col-dir">Направление</span>
-        <span class="col-lots">Лоты</span>
-        <span class="col-period">Период (с)</span>
-        <span class="col-ops">Операций</span>
-        <span class="col-first">1-я оп.</span>
-        <span class="col-last">Пок. оп.</span>
-        <span class="col-next">След. оп.</span>
+      <div class="robot-subtabs">
+        <button class="robot-subtab active" id="subtabActive" onclick="switchRobotTab('active')">🟢 Включенные <span class="sub-count" id="subActiveCount">0</span></button>
+        <button class="robot-subtab" id="subtabClosed" onclick="switchRobotTab('closed')">⚫ Отключенные <span class="sub-count" id="subClosedCount">0</span></button>
+        <button class="robot-subtab blacklist" id="subtabBlacklist" onclick="switchRobotTab('blacklist')">🚫 Чёрный список <span class="sub-count" id="subBlacklistCount">0</span></button>
+      </div>
+      <div class="blacklist-bar" id="blacklistBar">
+        <span style="color:var(--red);font-size:12px;font-weight:700;">Чёрный список:</span>
+        <span id="blacklistChips"></span>
+      </div>
+      <!-- Toolbar: search, sort, export, pause, sound -->
+      <div class="toolbar" id="robotsToolbar">
+        <input type="search" id="robotSearch" placeholder="Поиск по тикеру…" oninput="applyFilters()">
+        <select id="robotSort" onchange="applyFilters()">
+          <option value="ticker">Сортировка: по тикеру</option>
+          <option value="period">По периоду</option>
+          <option value="strikes">По операциям</option>
+          <option value="first">По началу</option>
+        </select>
+        <label class="switch" style="margin-left:8px;">
+          <input type="checkbox" id="soundToggle" onchange="toggleSound()">
+          <span class="switch-slider"></span>
+          Звук
+        </label>
+        <label class="switch" style="margin-left:8px;">
+          <input type="checkbox" id="pauseToggle" onchange="togglePause()">
+          <span class="switch-slider"></span>
+          Пауза
+        </label>
+        <button class="button primary" onclick="exportCsv()">Экспорт CSV</button>
+      </div>
+      <div class="robot-table-head" onclick="sortTable('ticker')">
+        <span class="col-ticker sortable">Инструмент <span class="sort-dir" id="sortDirTicker">▲</span></span>
+        <span class="col-dir sortable" onclick="event.stopPropagation(); sortTable('direction')">Направление <span class="sort-dir" id="sortDirDirection">▲</span></span>
+        <span class="col-lots sortable" onclick="event.stopPropagation(); sortTable('lots')">Лоты</span>
+        <span class="col-period sortable" onclick="event.stopPropagation(); sortTable('period')">Период (с)</span>
+        <span class="col-ops sortable" onclick="event.stopPropagation(); sortTable('ops')">Операций</span>
+        <span class="col-first sortable" onclick="event.stopPropagation(); sortTable('first')">1-я оп.</span>
+        <span class="col-last sortable" onclick="event.stopPropagation(); sortTable('last')">Пок. оп.</span>
+        <span class="col-next sortable" onclick="event.stopPropagation(); sortTable('next')">След. оп.</span>
         <span class="col-sec">Сек до след.</span>
-        <span class="col-price">Цена</span>
+        <span class="col-price sortable" onclick="event.stopPropagation(); sortTable('price')">Цена</span>
         <span class="col-status">Статус</span>
         <span class="col-copy"></span>
+        <span class="col-bl">🚫</span>
       </div>
       <div class="module-body" id="robotsBody">
         <div class="no-signals">Роботы не обнаружены</div>
@@ -337,7 +478,6 @@ header .status {
     </div>
   </div>
 
-  <!-- TAB: Activity / price grid -->
   <div class="tab-section" id="tab-activity">
     <div class="module-card" style="margin-bottom:16px;">
       <div class="module-header">
@@ -351,7 +491,6 @@ header .status {
     </div>
   </div>
 
-  <!-- TAB: Arba (M10) -->
   <div class="tab-section" id="tab-arba">
     <div class="module-card" style="margin-bottom:16px;">
       <div class="module-header">
@@ -364,7 +503,6 @@ header .status {
     </div>
   </div>
 
-  <!-- TAB: All module signals -->
   <div class="tab-section" id="tab-modules">
     <div class="modules-grid" id="modulesGrid"></div>
   </div>
@@ -382,6 +520,13 @@ const MODULES = [
 ];
 const COLLAPSED = new Set();
 let lastTs = 0;
+var lastData = null;
+let paused = false;
+let soundEnabled = false;
+let audioCtx = null;
+let lastKnownTickers = new Set();  // for new-robot detection
+let currentSort = { field: 'ticker', dir: 1 };  // dir: 1 asc, -1 desc
+let searchText = '';
 
 function toggleCard(id) {
   const body = document.getElementById(id + "Body");
@@ -404,8 +549,48 @@ function fmtNum(n) {
   return String(n);
 }
 
+function addToBlacklist(ticker) {
+  var bl = JSON.parse(localStorage.getItem("m08_blacklist") || "[]");
+  if (bl.indexOf(ticker) === -1) { bl.push(ticker); }
+  localStorage.setItem("m08_blacklist", JSON.stringify(bl));
+}
+function removeFromBlacklist(ticker) {
+  var bl = JSON.parse(localStorage.getItem("m08_blacklist") || "[]");
+  bl = bl.filter(function(t) { return t !== ticker; });
+  localStorage.setItem("m08_blacklist", JSON.stringify(bl));
+}
+function switchRobotTab(tab) {
+  document.querySelectorAll(".robot-subtab").forEach(function(b) { b.classList.remove("active"); });
+  var btn = document.getElementById("subtab" + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (btn) btn.classList.add("active");
+  document.getElementById("blacklistBar").classList.toggle("visible", tab === "blacklist");
+  if (lastData) render(lastData);
+}
+
+function toggleSound() {
+  soundEnabled = document.getElementById("soundToggle").checked;
+}
+function togglePause() {
+  paused = document.getElementById("pauseToggle").checked;
+  document.getElementById("pauseToggle").parentElement.classList.toggle("active", paused);
+}
+
+function beep() {
+  if (!soundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = "sine"; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+  } catch (e) { /* audio blocked */ }
+}
+
 function render(data) {
-  // Status
+  lastData = data;
   const now = Date.now();
   const fresh = (now - data.ts * 1000) < 15000;
   document.getElementById("statusDot").className = "dot " + (fresh ? "live" : "stale");
@@ -413,43 +598,112 @@ function render(data) {
   document.getElementById("lastUpdate").textContent = data.time || "";
   document.getElementById("footerTs").textContent = "Обновлено: " + data.time + " · автообновление каждые 5 с";
 
-  // Signals by module
   const byModule = {};
   for (const s of data.signals) {
     if (!byModule[s.module]) byModule[s.module] = [];
     byModule[s.module].push(s);
   }
 
-  // Summary
   document.getElementById("sigCount").textContent = data.signals.length;
   document.getElementById("critCount").textContent = data.signals.filter(s => s.severity >= 4).length;
 
-  // Robots — AnyScan-style table (always visible; empty state when none found)
   const robots = data.robots || [];
-  const activeRobots = robots.filter(r => r.active);
-  const closedRobots = robots.filter(r => !r.active);
+  const blList = JSON.parse(localStorage.getItem("m08_blacklist") || "[]");
+  const activeRobots = robots.filter(r => r.active && !blList.includes(r.ticker));
+  const closedRobots = robots.filter(r => !r.active && !blList.includes(r.ticker));
+  const blacklistedRobots = robots.filter(r => blList.includes(r.ticker));
   document.getElementById("robotCount").textContent = activeRobots.length;
   document.getElementById("robotCountBadge").textContent = activeRobots.length;
   document.getElementById("robotCountBadge").className = "count " + (activeRobots.length ? "active" : "");
 
-  const allRobots = [...activeRobots, ...closedRobots];
+  const currentSubtab = document.querySelector(".robot-subtab.active");
+  let subtabName = "active";
+  if (currentSubtab) {
+    if (currentSubtab.id === "subtabClosed") subtabName = "closed";
+    else if (currentSubtab.id === "subtabBlacklist") subtabName = "blacklist";
+  }
+  document.getElementById("subActiveCount").textContent = activeRobots.length;
+  document.getElementById("subClosedCount").textContent = closedRobots.length;
+  document.getElementById("subBlacklistCount").textContent = blList.length;
+
+  const chipsDiv = document.getElementById("blacklistChips");
+  chipsDiv.innerHTML = "";
+  blList.forEach(t => {
+    const chip = document.createElement("span");
+    chip.className = "blacklist-chip";
+    chip.innerHTML = `${t} <button title="Убрать из ЧС" onclick="removeFromBlacklist('${t}')">×</button>`;
+    chipsDiv.appendChild(chip);
+  });
+
+  // Detect new robots (tickers appearing for the first time)
+  const allTickers = new Set(robots.map(r => r.ticker));
+  const newTickers = [];
+  allTickers.forEach(t => { if (!lastKnownTickers.has(t)) newTickers.push(t); });
+  lastKnownTickers = allTickers;
+  if (newTickers.length > 0 && soundEnabled) beep();
+
+  // Build a keyed map for expansion state
+  // (expanded state preserved by ticker+period key)
+
+  let displayRobots;
+  if (subtabName === "active") displayRobots = activeRobots;
+  else if (subtabName === "closed") displayRobots = closedRobots;
+  else displayRobots = blacklistedRobots;
+
+  // Apply search filter
+  var st = document.getElementById("robotSearch");
+  if (st) searchText = (st.value || "").toLowerCase();
+  if (searchText) {
+    displayRobots = displayRobots.filter(function(r) {
+      return r.ticker.toLowerCase().indexOf(searchText) !== -1;
+    });
+  }
+
+  // Apply sort
+  var sf = currentSort.field;
+  var sdir = currentSort.dir;
+  displayRobots = displayRobots.slice().sort(function(a, b) {
+    var av, bv;
+    switch (sf) {
+      case 'ticker': av = a.ticker; bv = b.ticker; break;
+      case 'period': av = (a.period != null ? a.period : 0); bv = (b.period != null ? b.period : 0); break;
+      case 'ops': av = (a.operation_count != null ? a.operation_count : 0); bv = (b.operation_count != null ? b.operation_count : 0); break;
+      case 'first': av = (a.first_operation_dttm || ""); bv = (b.first_operation_dttm || ""); break;
+      case 'last': av = (a.last_operation_dttm || ""); bv = (b.last_operation_dttm || ""); break;
+      case 'next': av = (a.next_operation_dttm || ""); bv = (b.next_operation_dttm || ""); break;
+      case 'price': av = (a.strike_price != null ? a.strike_price : 0); bv = (b.strike_price != null ? b.strike_price : 0); break;
+      case 'direction': av = (a.direction || ""); bv = (b.direction || ""); break;
+      default: av = a.ticker; bv = b.ticker;
+    }
+    if (av < bv) return -1 * sdir;
+    if (av > bv) return 1 * sdir;
+    return 0;
+  });
+
   let robotHtml = "";
-  for (const r of allRobots) {
-    const lots = r.lots != null ? r.lots : (r.last_volume != null ? r.last_volume : "—");
-    const period = r.period != null ? Math.round(r.period) : (r.strike_interval ? Math.round(r.strike_interval) : "—");
-    const ops = r.operation_count != null ? r.operation_count : (r.strikes != null ? r.strikes : "—");
-    const first = r.first_operation_dttm || "—";
-    const last = r.last_operation_dttm || "—";
-    const next = r.next_operation_dttm || "—";
-    const price = r.strike_price != null ? r.strike_price.toFixed(2) : "—";
-    const dataAttrs = r.active
+  for (var i = 0; i < displayRobots.length; i++) {
+    var r = displayRobots[i];
+    var isNew = newTickers.indexOf(r.ticker) !== -1;
+    var lots = r.lots != null ? r.lots : (r.last_volume != null ? r.last_volume : "—");
+    var period = r.period != null ? Math.round(r.period) : (r.strike_interval ? Math.round(r.strike_interval) : "—");
+    var ops = r.operation_count != null ? r.operation_count : (r.strikes != null ? r.strikes : "—");
+    var first = r.first_operation_dttm || "—";
+    var last = r.last_operation_dttm || "—";
+    var next = r.next_operation_dttm || "—";
+    var price = r.strike_price != null ? r.strike_price.toFixed(2) : "—";
+    var dataAttrs = r.active
       ? `data-t="${r.ticker}" data-ts="${r.last_update}" data-interval="${r.strike_interval}" data-sec="${Math.ceil(r.seconds_to_next || 0)}"`
       : "";
-    const dir = (r.direction === "long") ? "🟢 LON" : (r.direction === "short") ? "🔴 SHR" : "—";
-    const dirClass = (r.direction === "long") ? "long" : (r.direction === "short") ? "short" : "";
-    const copyText = `${r.ticker} ${r.direction === "long" ? "BUY" : r.direction === "short" ? "SELL" : ""} @ ${price} период ${period}с лоты ${lots}`;
-    robotHtml += `<div class="robot-row ${r.active ? "active" : "closed"}" ${dataAttrs}>
-      <span class="col-ticker">${r.ticker}</span>
+    var dir = (r.direction === "long") ? "🟢 LON" : (r.direction === "short") ? "🔴 SHR" : "—";
+    var dirClass = (r.direction === "long") ? "long" : (r.direction === "short") ? "short" : "";
+    var copyText = r.ticker + " " + (r.direction === "long" ? "BUY" : r.direction === "short" ? "SELL" : "") + " @" + price + " период " + period + "с лоты " + lots;
+    var isBlacklisted = blList.indexOf(r.ticker) !== -1;
+    var blBtn = isBlacklisted
+      ? `<button class="blacklist-btn in-list" title="Убрать из ЧС" onclick="removeFromBlacklist('${r.ticker}')">🚫</button>`
+      : `<button class="blacklist-btn" title="В черный список" onclick="addToBlacklist('${r.ticker}')">🚫</button>`;
+    var newBadge = isNew ? ' <span class="new-robot-badge">НОВЫЙ</span>' : '';
+    robotHtml += `<div class="robot-row ${r.active ? "active" : "closed"}" ${dataAttrs} onclick="toggleDetail(this, '${r.ticker}', ${i})">
+      <span class="col-ticker">${r.ticker}${newBadge}</span>
       <span class="col-dir ${dirClass}">${dir}</span>
       <span class="col-lots">${lots}</span>
       <span class="col-period">${period}</span>
@@ -461,14 +715,15 @@ function render(data) {
       <span class="col-price">${price}</span>
       <span class="col-status">${r.active ? '<span class="badge-on">ACTIVE</span>' : '<span class="badge-off">ОТКЛ</span>'}</span>
       <span class="col-copy"><button class="copy-btn" data-copy="${copyText.replace(/"/g, '&quot;')}">⧉</button></span>
+      <span class="col-bl">${blBtn}</span>
     </div>`;
   }
   document.getElementById("robotsBody").innerHTML = robotHtml ||
-    '<div class="no-signals">Роботы не обнаружены — скринер активен, обновляется каждые 5 с</div>';
+    '<div class="no-signals">' + (subtabName === "blacklist" ? "Чёрный список пуст" : "Роботы не обнаружены — скринер активен, обновляется каждые 5 с") + '</div>';
 
-  // Copy buttons (event delegation)
   document.getElementById("robotsBody").querySelectorAll(".copy-btn").forEach(btn => {
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
       const text = this.getAttribute("data-copy");
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -480,7 +735,6 @@ function render(data) {
     });
   });
 
-  // Arba
   const arba = data.arba || [];
   document.getElementById("arbaCount").textContent = arba.filter(a => a.spread < 0).length;
   document.getElementById("arbaCountBadge").textContent = arba.length;
@@ -498,7 +752,6 @@ function render(data) {
     document.getElementById("arbaBody").innerHTML = html;
   }
 
-  // Price grid
   const states = data.states || {};
   const tickers = Object.keys(states).filter(t => !/^(SBERP|GAZPP|VTBRP|TATNP|SIU6|BRU6|GDH6|MEU6)$/.test(t));
   let priceHtml = "";
@@ -508,7 +761,6 @@ function render(data) {
     const bid = st.bid != null ? st.bid.toFixed(2) : "—";
     const ask = st.ask != null ? st.ask.toFixed(2) : "—";
     const dayVol = st.day_volume ? fmtNum(st.day_volume) + " шт" : "—";
-    const up = st.last >= 0; // we don't track open/prev here, use class neutrally
     priceHtml += `<div class="price-cell">
       <div class="ticker">${t}</div>
       <div class="last">${st.last.toFixed(2)}</div>
@@ -518,14 +770,13 @@ function render(data) {
   }
   document.getElementById("priceGrid").innerHTML = priceHtml || '<div class="no-signals">—</div>';
 
-  // Module cards
   const grid = document.getElementById("modulesGrid");
   let gridHtml = "";
   for (const mod of MODULES) {
     const signals = byModule[mod] || [];
     const isRobots = mod.includes("M08");
     const isArba = mod.includes("M10");
-    if (isRobots || isArba) continue; // shown in special sections above
+    if (isRobots || isArba) continue;
     if (!signals.length) continue;
     const maxSev = Math.max(...signals.map(s => s.severity));
     const cardClass = maxSev >= 4 ? "hot" : (maxSev >= 3 ? "has-signals" : "");
@@ -551,7 +802,86 @@ function render(data) {
   grid.innerHTML = gridHtml;
 }
 
-// --- Tab switching (AnyScan-style nav) ---
+function sortTable(field) {
+  if (currentSort.field === field) {
+    currentSort.dir = -currentSort.dir;
+  } else {
+    currentSort.field = field;
+    currentSort.dir = 1;
+  }
+  // Update sort dir indicators
+  document.querySelectorAll(".sort-dir").forEach(function(el) { el.textContent = "▲"; });
+  var el = document.getElementById("sortDir" + field.charAt(0).toUpperCase() + field.slice(1));
+  if (el) el.textContent = currentSort.dir === 1 ? "▲" : "▼";
+  if (lastData) render(lastData);
+}
+
+function applyFilters() {
+  if (lastData) render(lastData);
+}
+
+function toggleDetail(row, ticker, idx) {
+  // Remove existing detail rows
+  document.querySelectorAll(".robot-detail").forEach(function(d) { d.remove(); });
+  document.querySelectorAll(".robot-row.expanded").forEach(function(r) { r.classList.remove("expanded"); });
+  // If same row clicked again, just collapse
+  if (row.classList.contains("expanded")) return;
+  row.classList.add("expanded");
+  // Build detail HTML after the row
+  var detail = document.createElement("div");
+  detail.className = "robot-detail";
+  detail.innerHTML = `
+    <div class="detail-row"><span class="k">Тикер:</span><span class="v">${ticker}</span></div>
+    <div class="detail-row"><span class="k">Направление:</span><span class="v">${row.querySelector(".col-dir").textContent}</span></div>
+    <div class="detail-row"><span class="k">Период:</span><span class="v">${row.querySelector(".col-period").textContent} сек</span></div>
+    <div class="detail-row"><span class="k">Операций:</span><span class="v">${row.querySelector(".col-ops").textContent}</span></div>
+    <div class="detail-row"><span class="k">Цена:</span><span class="v">${row.querySelector(".col-price").textContent}</span></div>
+    <div class="detail-row"><span class="k">1-я оп.:</span><span class="v">${row.querySelector(".col-first").textContent}</span></div>
+    <div class="detail-row"><span class="k">Пок. оп.:</span><span class="v">${row.querySelector(".col-last").textContent}</span></div>
+    <div class="csv-hint">Нажмите на другую строку, чтобы закрыть эту деталь.</div>
+  `;
+  row.parentNode.insertBefore(detail, row.nextSibling);
+}
+
+function exportCsv() {
+  var robots = lastData ? lastData.robots : [];
+  var blList = JSON.parse(localStorage.getItem("m08_blacklist") || "[]");
+  var filtered = robots.filter(r => !blList.includes(r.ticker));
+  var st = document.getElementById("robotSearch");
+  var sText = (st ? st.value : "").toLowerCase();
+  if (sText) filtered = filtered.filter(function(r) { return r.ticker.toLowerCase().indexOf(sText) !== -1; });
+  var sf = currentSort.field, sdir = currentSort.dir;
+  filtered = filtered.slice().sort(function(a, b) {
+    var av, bv;
+    switch (sf) {
+      case 'ticker': av = a.ticker; bv = b.ticker; break;
+      case 'period': av = (a.period != null ? a.period : 0); bv = (b.period != null ? b.period : 0); break;
+      case 'ops': av = (a.operation_count != null ? a.operation_count : 0); bv = (b.operation_count != null ? b.operation_count : 0); break;
+      default: av = a.ticker; bv = b.ticker;
+    }
+    if (av < bv) return -1 * sdir;
+    if (av > bv) return 1 * sdir;
+    return 0;
+  });
+  var lines = ["Тикер,Направление,Лоты,Период_с,Операции,1_я_оп,Пок_оп,Цена,Статус"];
+  for (var i = 0; i < filtered.length; i++) {
+    var r = filtered[i];
+    var dir = r.direction === "long" ? "LONG" : r.direction === "short" ? "SHORT" : "FLAT";
+    var status = r.active ? "ACTIVE" : "CLOSED";
+    lines.push([r.ticker, dir, r.lots != null ? r.lots : "", r.period != null ? Math.round(r.period) : "", r.operation_count != null ? r.operation_count : "", (r.first_operation_dttm || ""), (r.last_operation_dttm || ""), r.strike_price != null ? r.strike_price.toFixed(2) : "", status].join(","));
+  }
+  var csv = lines.join("\n");
+  var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "m08_robots_" + new Date().toISOString().slice(0,16).replace(/[:]/g,"-") + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 document.querySelectorAll(".nav-tab").forEach(function(btn) {
   btn.addEventListener("click", function() {
     var tabId = btn.dataset.tab;
@@ -563,10 +893,8 @@ document.querySelectorAll(".nav-tab").forEach(function(btn) {
   });
 });
 
-// --- Live data only — no demo fallback ---
-
-// Live second counter: update countdown every 1s like aniscan
 setInterval(function() {
+  if (paused) return;
   document.querySelectorAll(".robot-row.active").forEach(function(row) {
     var lastTs = parseFloat(row.dataset.ts);
     var interval = parseFloat(row.dataset.interval);
@@ -581,27 +909,40 @@ setInterval(function() {
 }, 1000);
 
 async function poll() {
-  try {
-    const url = "./data/screener.json?t=" + Date.now();
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    if (data.ts !== lastTs) {
-      lastTs = data.ts;
-      render(data);
-      document.getElementById("statusDot").className = "dot live";
-      document.getElementById("statusText").textContent = "LIVE";
+  if (paused) { setTimeout(poll, 5000); return; }
+  let attempts = 0;
+  const maxAttempts = 3;
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      const url = "./data/screener.json?t=" + Date.now();
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const data = await resp.json();
+      if (data.ts !== lastTs) {
+        lastTs = data.ts;
+        render(data);
+        document.getElementById("statusDot").className = "dot live";
+        document.getElementById("statusText").textContent = "LIVE";
+      }
+      setTimeout(poll, 5000);
+      return;
+    } catch (e) {
+      if (attempts >= maxAttempts) {
+        document.getElementById("statusDot").className = "dot stale";
+        document.getElementById("statusText").textContent = "ОШИБКА: нет данных — проверьте, что сервер запущен на http://localhost:8080";
+        document.getElementById("robotCountBadge").textContent = "0";
+        setTimeout(poll, 5000);
+        return;
+      }
     }
-  } catch (e) {
-    document.getElementById("statusDot").className = "dot stale";
-    document.getElementById("statusText").textContent = "ОШИБКА: нет данных — запускать через http://localhost:8080";
-    document.getElementById("robotCountBadge").textContent = "0";
+    await new Promise(r => setTimeout(r, 1000));
   }
 }
-poll();
-setInterval(poll, 5000);
 
-// Drag & drop: open data/screener.json directly when served via file://
+poll();
+switchRobotTab("active");
+
 document.body.addEventListener("dragover", e => e.preventDefault());
 document.body.addEventListener("drop", e => {
   e.preventDefault();
@@ -622,7 +963,6 @@ document.body.addEventListener("drop", e => {
   reader.readAsText(f, "utf-8");
 });
 
-// If opened via file://, hint the user how to get live data
 if (location.protocol === "file:") {
   const hint = document.getElementById("statusText");
   hint.textContent = "FILE MODE — перетащите сюда data/screener.json или откройте через http://localhost:8080";

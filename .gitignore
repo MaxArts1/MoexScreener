@@ -1,5 +1,22 @@
 __pycache__/
 *.pyc
 .env
+.env.tbank
+*.env.local
 robot_db/
 .m7/cycles/*.json.tmp
+
+# Runtime data dumps (regenerated every cycle)
+data/screener.json
+data/*.json
+
+# Debug / test artifacts
+_check.js
+_run_dashboard.js
+_test_dashboard.js
+balance.py
+check*.py
+diag*.py
+probe*.py
+test_*.py
+strict_check.py
