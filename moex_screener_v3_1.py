@@ -378,9 +378,9 @@ class TickerState:
             self.trade_gaps.pop(0) if self.trade_gaps else None
             self.trade_buysell.pop(0)
         # Keep the dedup set bounded (it only needs to cover the recent tail)
-        if len(self._seen_trades) > MAX_TRADES * 4:
-            self._seen_trades.clear()
-            self._seen_trades.update(
+        if len(self._trade_keys) > MAX_TRADES * 4:
+            self._trade_keys.clear()
+            self._trade_keys.update(
                 (round(t, 3), round(p, 6) if p is not None else None, v)
                 for t, p, v in zip(self.trade_times[-MAX_TRADES:],
                                    self.trade_prices[-MAX_TRADES:],
