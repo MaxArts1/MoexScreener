@@ -664,14 +664,13 @@ class M07_IcebergSingle(Module):
 # ---------------------------------------------------------------------------
 ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "3"))   # min interval between strikes
 ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "120")) # max interval
-ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "5"))       # min strikes at one price
+ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "3"))       # min strikes at one price
 # Robot strikes use the MINIMAL lot. Baseline = min trade qty on the ticker.
-# Robot ALWAYS strikes with the SAME lot size, so anything > factor x min is noise.
-ROBOT_QTY_MIN_FACTOR = float(os.getenv("ROBOT_QTY_MIN_FACTOR", "2.0"))  # strike qty <= factor x ticker MIN qty
+ROBOT_QTY_MIN_FACTOR = float(os.getenv("ROBOT_QTY_MIN_FACTOR", "5.0"))  # strike qty <= factor x ticker MIN qty
 # Direction must be consistent: majority side share >= this
-ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.70"))
-# Only analyse trades within this window (minutes) — long windows smear the pattern
-ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "90"))
+ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.50"))
+# Only analyse trades within this window (minutes)
+ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "180"))
 ROBOT_MIN_LIFETIME_MIN = float(os.getenv("ROBOT_MIN_LIFETIME_MIN", "1"))  # min survival time (minutes)
 
 @dataclass
@@ -954,21 +953,10 @@ class M08_Robots(Module):
                 med_gap = statistics.median(gaps)
                 if not (ROBOT_STRIKE_MIN_SEC <= med_gap <= ROBOT_STRIKE_MAX_SEC):
                     continue
-                # Strike intervals must be stable: CV < 40% of median gap.
-                gap_std = statistics.pstdev(gaps) if len(gaps) > 1 else 0
-                gap_cv = gap_std / med_gap if med_gap > 0 else 1.0
-                if gap_cv > 0.40:
-                    continue
-
                 strike_qtys = [h[2] for h in hits if h[2] > 0]
                 if not strike_qtys:
                     continue
                 med_qty = statistics.median(strike_qtys)
-                # Lot size must be consistent: CV < 30% of median qty.
-                qty_std = statistics.pstdev(strike_qtys) if len(strike_qtys) > 1 else 0
-                qty_cv = qty_std / med_qty if med_qty > 0 else 1.0
-                if qty_cv > 0.30:
-                    continue
 
                 # Direction: majority BUYSELL among the MINIMAL strikes only,
                 # and it must be consistent (>= ROBOT_DIR_MIN_SHARE).
