@@ -662,16 +662,17 @@ class M07_IcebergSingle(Module):
 # Robots repeat minimal-size orders every 6–90 sec near the spread,
 # and must survive at least ROBOT_MIN_LIFETIME_MIN minutes.
 # ---------------------------------------------------------------------------
-ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "3"))
-ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "120"))
-ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "5"))   # min strikes at one price
+ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "5"))   # min interval between strikes
+ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "120")) # max interval
+ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "6"))       # min strikes at one price
 # Robot strikes use the MINIMAL lot. Baseline = min trade qty on the ticker.
-ROBOT_QTY_MIN_FACTOR = float(os.getenv("ROBOT_QTY_MIN_FACTOR", "2.0"))  # strike qty <= factor x ticker MIN qty
+# Robot ALWAYS strikes with the SAME lot size, so anything > factor x min is noise.
+ROBOT_QTY_MIN_FACTOR = float(os.getenv("ROBOT_QTY_MIN_FACTOR", "1.5"))  # strike qty <= factor x ticker MIN qty
 # Direction must be consistent: majority side share >= this
-ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.70"))
+ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.85"))
 # Only analyse trades within this window (minutes) — long windows smear the pattern
-ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "90"))
-ROBOT_MIN_LIFETIME_MIN = float(os.getenv("ROBOT_MIN_LIFETIME_MIN", "1"))  # min survival time (minutes)
+ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "60"))
+ROBOT_MIN_LIFETIME_MIN = float(os.getenv("ROBOT_MIN_LIFETIME_MIN", "2"))  # min survival time (minutes)
 
 @dataclass
 class RobotSession:
@@ -926,7 +927,8 @@ class M08_Robots(Module):
                 price_hits.setdefault(price, []).append((ts_, price, qty_, bs_))
 
             # Baseline for "minimal lot": the smallest trade size on this ticker.
-            # A robot always strikes with the minimum lot, so anything bigger is noise.
+            # A robot always strikes with the SAME minimal lot, so anything bigger
+            # or varying is noise.
             ticker_vols = [x[2] for x in trade_tuples if x[2] and x[2] > 0]
             ticker_min_qty = min(ticker_vols) if ticker_vols else 1.0
             max_allowed = ticker_min_qty * ROBOT_QTY_MIN_FACTOR
@@ -952,11 +954,21 @@ class M08_Robots(Module):
                 med_gap = statistics.median(gaps)
                 if not (ROBOT_STRIKE_MIN_SEC <= med_gap <= ROBOT_STRIKE_MAX_SEC):
                     continue
+                # Strike intervals must be stable: CV < 40% of median gap.
+                gap_std = statistics.pstdev(gaps) if len(gaps) > 1 else 0
+                gap_cv = gap_std / med_gap if med_gap > 0 else 1.0
+                if gap_cv > 0.40:
+                    continue
 
                 strike_qtys = [h[2] for h in hits if h[2] > 0]
                 if not strike_qtys:
                     continue
                 med_qty = statistics.median(strike_qtys)
+                # Lot size must be consistent: CV < 30% of median qty.
+                qty_std = statistics.pstdev(strike_qtys) if len(strike_qtys) > 1 else 0
+                qty_cv = qty_std / med_qty if med_qty > 0 else 1.0
+                if qty_cv > 0.30:
+                    continue
 
                 # Direction: majority BUYSELL among the MINIMAL strikes only,
                 # and it must be consistent (>= ROBOT_DIR_MIN_SHARE).
