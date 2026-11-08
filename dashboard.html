@@ -250,7 +250,7 @@
   .robot-row {
     padding: 10px 16px;
     display: grid;
-    grid-template-columns: 90px 90px 60px 80px 70px 80px 80px 80px 90px 80px 90px 40px 36px;
+    grid-template-columns: 90px 90px 60px 80px 70px 80px 80px 80px 90px 80px 80px 90px 40px 36px;
     gap: 8px;
     align-items: center;
     font-size: 13px;
@@ -300,7 +300,7 @@
   }
   .copy-btn:hover { color: var(--blue); border-color: var(--blue); }
   .copy-btn.copied { color: var(--green); border-color: var(--green); }
-  .col-lots, .col-period, .col-ops, .col-first, .col-last, .col-next, .col-price, .col-status { text-align: center; }
+  .col-lots, .col-period, .col-ops, .col-first, .col-last, .col-next, .col-price, .col-bid, .col-ask, .col-status { text-align: center; }
   .badge-on {
     display: inline-block;
     background: var(--green);
@@ -467,6 +467,8 @@
         <span class="col-last sortable" onclick="event.stopPropagation(); sortTable('last')">Пок. оп.</span>
         <span class="col-next sortable" onclick="event.stopPropagation(); sortTable('next')">След. оп.</span>
         <span class="col-sec">Сек до след.</span>
+        <span class="col-bid">Бид</span>
+        <span class="col-ask">Аск</span>
         <span class="col-price sortable" onclick="event.stopPropagation(); sortTable('price')">Цена</span>
         <span class="col-status">Статус</span>
         <span class="col-copy"></span>
@@ -635,6 +637,14 @@ function render(data) {
     chipsDiv.appendChild(chip);
   });
 
+  // State lookup for bid/ask spread context
+  const statesMap = {};
+  (data.states || {}).forEach ? null : null;
+  var statesList = data.states || {};
+  if (statesList && typeof statesList === 'object') {
+    Object.keys(statesList).forEach(function(k) { statesMap[k] = statesList[k]; });
+  }
+
   // Detect new robots (tickers appearing for the first time)
   const allTickers = new Set(robots.map(r => r.ticker));
   const newTickers = [];
@@ -691,6 +701,10 @@ function render(data) {
     var last = r.last_operation_dttm || "—";
     var next = r.next_operation_dttm || "—";
     var price = r.strike_price != null ? r.strike_price.toFixed(2) : "—";
+    // Bid/ask context for spread check
+    var st = statesMap[r.ticker] || {};
+    var bid = st.bid != null ? st.bid.toFixed(2) : "—";
+    var ask = st.ask != null ? st.ask.toFixed(2) : "—";
     var dataAttrs = r.active
       ? `data-t="${r.ticker}" data-ts="${r.last_update}" data-interval="${r.strike_interval}" data-sec="${Math.ceil(r.seconds_to_next || 0)}"`
       : "";
@@ -712,6 +726,8 @@ function render(data) {
       <span class="col-last">${last}</span>
       <span class="col-next">${next}</span>
       <span class="col-sec">${r.active ? Math.ceil(r.seconds_to_next || 0) : "—"}</span>
+      <span class="col-bid">${bid}</span>
+      <span class="col-ask">${ask}</span>
       <span class="col-price">${price}</span>
       <span class="col-status">${r.active ? '<span class="badge-on">ACTIVE</span>' : '<span class="badge-off">ОТКЛ</span>'}</span>
       <span class="col-copy"><button class="copy-btn" data-copy="${copyText.replace(/"/g, '&quot;')}">⧉</button></span>
