@@ -662,16 +662,16 @@ class M07_IcebergSingle(Module):
 # Robots repeat minimal-size orders every 6–90 sec near the spread,
 # and must survive at least ROBOT_MIN_LIFETIME_MIN minutes.
 # ---------------------------------------------------------------------------
-ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "4"))   # min interval between strikes
+ROBOT_STRIKE_MIN_SEC = float(os.getenv("ROBOT_STRIKE_MIN_SEC", "3"))   # min interval between strikes
 ROBOT_STRIKE_MAX_SEC = float(os.getenv("ROBOT_STRIKE_MAX_SEC", "120")) # max interval
 ROBOT_MIN_REPEATS    = int(os.getenv("ROBOT_MIN_REPEATS", "5"))       # min strikes at one price
 # Robot strikes use the MINIMAL lot. Baseline = min trade qty on the ticker.
 # Robot ALWAYS strikes with the SAME lot size, so anything > factor x min is noise.
 ROBOT_QTY_MIN_FACTOR = float(os.getenv("ROBOT_QTY_MIN_FACTOR", "2.0"))  # strike qty <= factor x ticker MIN qty
 # Direction must be consistent: majority side share >= this
-ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.75"))
+ROBOT_DIR_MIN_SHARE  = float(os.getenv("ROBOT_DIR_MIN_SHARE", "0.70"))
 # Only analyse trades within this window (minutes) — long windows smear the pattern
-ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "75"))
+ROBOT_TRADE_WINDOW_MIN = float(os.getenv("ROBOT_TRADE_WINDOW_MIN", "90"))
 ROBOT_MIN_LIFETIME_MIN = float(os.getenv("ROBOT_MIN_LIFETIME_MIN", "1"))  # min survival time (minutes)
 
 @dataclass
