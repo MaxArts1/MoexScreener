@@ -4,6 +4,8 @@ __pycache__/
 .env.tbank
 *.env.local
 robot_db/
+live.log
+live.pid
 .m7/cycles/*.json.tmp
 
 # Runtime data dumps (regenerated every cycle)

@@ -64,6 +64,13 @@ def _env_float(name: str, default: float) -> float:
 def _env_int(name: str, default: int) -> int:
     return int(_env_float(name, float(default)))
 
+# MOEX ISS timestamps are Moscow time (UTC+3).
+MSK_TZ = timezone(timedelta(hours=3))
+
+
+def _msk_now() -> datetime:
+    return datetime.now(tz=MSK_TZ)
+
 MOEX_WS_URL = os.getenv("MOEX_WS_URL", "wss://iss.moex.com/infocx/v3/websocket")
 MOEX_DOMAIN = os.getenv("MOEX_DOMAIN", "DEMO")
 MOEX_LOGIN = os.getenv("MOEX_LOGIN", "guest")
@@ -106,9 +113,12 @@ def _fetch_board_securities(board: str, top_n: int = 0) -> list:
     board_map = {
         "TQBR":   "stock/markets/shares",
         "CURREN": "stock/markets/forex",
-        "FUTURE": "stock/markets/futures",
+        "RFUD":   "futures/markets/forts",   # MOEX derivatives board
+        "FUTURE": "futures/markets/forts",   # legacy alias
     }
     eng = board_map.get(board, "stock/markets/shares")
+    if board == "FUTURE":
+        board = "RFUD"
 
     # Step 1: all active SECIDs
     url_sec = f"{BASE}/engines/{eng}/boards/{board}/securities.json?iss.meta=off"
@@ -119,6 +129,20 @@ def _fetch_board_securities(board: str, top_n: int = 0) -> list:
         sec = data.get("securities", {})
         columns = sec.get("columns", [])
         rows = sec.get("data", [])
+        # securities.json also carries marketdata with today's turnover — use it
+        # to rank instruments without one extra request per ticker.
+        md_block = data.get("marketdata") or {}
+        md_cols = md_block.get("columns") or []
+        md_rows = md_block.get("data") or []
+        valtoday: dict[str, float] = {}
+        if md_rows and "SECID" in md_cols and "VALTODAY" in md_cols:
+            i_sid = md_cols.index("SECID")
+            i_val = md_cols.index("VALTODAY")
+            for row in md_rows:
+                try:
+                    valtoday[row[i_sid]] = float(row[i_val] or 0)
+                except (TypeError, ValueError):
+                    continue
         if not rows:
             return []
         idx_secid = columns.index("SECID") if "SECID" in columns else 0
@@ -140,24 +164,32 @@ def _fetch_board_securities(board: str, top_n: int = 0) -> list:
     if top_n <= 0:
         return all_ids
 
-    # Step 2: rank candidate pool by VALTODAY (parallel, bounded)
+    # Step 2a: rank by the turnover we already have (no extra requests)
+    if any(v > 0 for v in valtoday.values()):
+        return sorted(all_ids, key=lambda s: valtoday.get(s, 0.0), reverse=True)[:top_n]
+
+    # Step 2b: marketdata empty — probe a candidate pool by VALTODAY
     pool = all_ids[:min(120, len(all_ids))]
 
     def _valtoday(secid: str) -> float:
-        url_bp = (f"{BASE}/engines/{eng}/boards/{board}/securities/{secid}/boardprice.json"
-                  f"?iss.meta=off&iss.depth=1")
-        try:
-            r2 = urllib.request.Request(url_bp, headers={"User-Agent": "moex-screener/3.1"})
-            with urllib.request.urlopen(r2, timeout=12) as resp:
-                bp = _json.loads(resp.read().decode("utf-8"))
-            md = bp.get("marketdata", {})
-            cols = md.get("columns", [])
-            brows = md.get("data", [])
-            if not brows or "VALTODAY" not in cols:
-                return 0.0
-            return float(brows[0][cols.index("VALTODAY")] or 0)
-        except Exception:
-            return 0.0
+        urls = [
+            f"{BASE}/engines/{eng}/boards/{board}/securities/{secid}/boardprice.json?iss.meta=off&iss.depth=1",
+            f"{BASE}/engines/{eng}/securities/{secid}.json?iss.meta=off",
+        ]
+        for url_bp in urls:
+            try:
+                r2 = urllib.request.Request(url_bp, headers={"User-Agent": "moex-screener/3.1"})
+                with urllib.request.urlopen(r2, timeout=12) as resp:
+                    bp = _json.loads(resp.read().decode("utf-8"))
+                md = bp.get("marketdata") or {}
+                cols = md.get("columns") or []
+                brows = md.get("data") or []
+                if not brows or "VALTODAY" not in cols:
+                    continue
+                return float(brows[-1][cols.index("VALTODAY")] or 0)
+            except Exception:
+                continue
+        return 0.0
 
     ranked = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
@@ -178,10 +210,10 @@ def _get_equities() -> list:
 
 
 def _get_futures() -> list:
-    """Return FUTURES: explicit list from env, or top FUTURES_TOP_N FUTURE by VALTODAY."""
+    """Return FUTURES: explicit list from env, or top FUTURES_TOP_N RFUD by VALTODAY."""
     if FUTURES:
         return FUTURES
-    return _fetch_board_securities("FUTURE", top_n=FUTURES_TOP_N)
+    return _fetch_board_securities("RFUD", top_n=FUTURES_TOP_N)
 
 # Arba (M10) — linked instrument pairs: (regular, preferred)
 ARBA_PAIRS = [
@@ -217,7 +249,11 @@ ICEBERG_HISTORY_WINDOW = _env_int("ICEBERG_HISTORY_WINDOW", 20)
 SPREAD_ALERT_THRESHOLD = _env_float("SPREAD_ALERT_THRESHOLD", 0.3)
 
 # Robot DB (M08 v2)
-ROBOT_DB_DIR = os.getenv("ROBOT_DB_DIR", "E:/Deepseek/ReTools/moex-screener/robot_db")
+# Robot DB lives next to the script unless ROBOT_DB_DIR overrides it
+# (inside Docker the env var is set to /app/robot_db).
+ROBOT_DB_DIR = os.getenv("ROBOT_DB_DIR") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "robot_db"
+)
 SOUND_ALERT_ENABLED = os.getenv("SOUND_ALERT_ENABLED", "true").lower() == "true"
 
 # Spread zone multiplier: how far outside bid/ask to consider "near the spread"
@@ -293,7 +329,8 @@ class TickerState:
     strike_gaps: list = field(default_factory=list)    # inter-strike gaps (10-60s robots)
     last_strikes: dict = field(default_factory=dict)  # {price_level: [ts1, ts2, ...]}
     history: list = field(default_factory=list)  # (ts, last, vol)
-    _seen_trades: set = field(default_factory=set)  # (ts, price, qty) dedup keys
+    _trade_keys: set = field(default_factory=set)
+    _trade_key_order: list = field(default_factory=list)
 
     def push_candle(self, ts, last, vol):
         self.last = last
@@ -305,13 +342,15 @@ class TickerState:
         self.last_update = datetime.now()
 
     def push_trade(self, price, vol, ts, buy_sell=""):
-        # Deduplicate: each poll re-fetches the same tail of the tape.
-        # Without this the arrays fill up with duplicates and the median
-        # interval collapses toward zero.
-        key = (round(ts, 3), round(price, 6) if price is not None else None, vol)
-        if key in self._seen_trades:
+        # Drop duplicates: every poll re-reads a small tail of trades.json,
+        # so the same trade would otherwise be counted on every cycle.
+        key = (round(float(ts), 3), float(price or 0), float(vol or 0), buy_sell or "")
+        if key in self._trade_keys:
             return False
-        self._seen_trades.add(key)
+        self._trade_keys.add(key)
+        self._trade_key_order.append(key)
+        if len(self._trade_key_order) > 2000:
+            self._trade_keys.discard(self._trade_key_order.pop(0))
 
         self.last = price
         self.trade_times.append(ts)
@@ -702,16 +741,16 @@ class RobotSession:
             return 0
         return int((60.0 / self.strike_interval) * self.start_volume)
 
-    def compute_next_strike(self) -> float:
+    def compute_next_strike(self, now: float | None = None) -> float:
         """Estimate seconds until next robot strike based on observed cadence."""
         if len(self._strike_ts) < 2:
             return 0.0
         gaps = [self._strike_ts[i+1] - self._strike_ts[i] for i in range(len(self._strike_ts)-1)]
         median_gap = statistics.median(gaps)
-        elapsed = time.time() - self.last_update
+        elapsed = (time.time() if now is None else now) - self.last_update
         return max(0.0, median_gap - elapsed)
 
-    def to_dict(self) -> dict:
+    def to_dict(self, now: float | None = None) -> dict:
         # Convert start_volume (shares) to lots
         lots = int(self.start_volume / self.lot_size) if self.lot_size > 0 else 0
         return {
@@ -728,7 +767,7 @@ class RobotSession:
             "price_move_pct": round(self.price_move * 100, 4),
             "last_volume": self.last_volume,
             "active": self.active,
-            "next_strike_estimate": round(self.compute_next_strike(), 1),
+            "next_strike_estimate": round(self.compute_next_strike(now), 1),
             # aniscan-compatible fields
             "period": round(self.strike_interval, 1),
             "lots": lots,
@@ -737,7 +776,7 @@ class RobotSession:
             "last_operation_dttm": self.last_operation_dttm,
             "next_operation_dttm": self.next_operation_dttm,
             "lot_in_minute": self.lot_in_minute,
-            "seconds_to_next": round(self.compute_next_strike(), 1) if self.active else 0,
+            "seconds_to_next": round(self.compute_next_strike(now), 1) if self.active else 0,
             "direction": self.direction,
             "dir_share": self.dir_share,
         }
@@ -752,6 +791,7 @@ class M08_Robots(Module):
         self._db_file = os.path.join(self._db_dir, "robots.json")
         self._last_db_write = 0.0
         self._db_lock = False
+        self._market_now = 0.0  # exchange clock, kept in sync from evaluate()
         os.makedirs(self._db_dir, exist_ok=True)
         self._load_db()
 
@@ -762,10 +802,16 @@ class M08_Robots(Module):
                 with open(self._db_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 now = time.time()
-                for r in data.get("robots", []):
+                records = data.get("robots", [])
+                # Use the freshest stored record as the reference clock: after
+                # the session close wall-clock time keeps running, and comparing
+                # against it would throw away perfectly good live sessions.
+                newest = max((r.get("last_update", 0) or 0 for r in records), default=0)
+                ref = newest if newest > 0 else now
+                for r in records:
                     last_update = r.get("last_update", 0)
                     # Keep only sessions updated within the last 30 minutes
-                    if now - last_update > 1800:
+                    if ref - last_update > 1800:
                         continue
                     key = f"{r['ticker']}@{r.get('strike_price', 0)}"
                     if key not in self.sessions:
@@ -792,8 +838,8 @@ class M08_Robots(Module):
         Only sessions updated in the last 30 min are written."""
         if not force and time.time() - self._last_db_write < 30:
             return
-        now = time.time()
-        fresh = [s.to_dict() for s in self.sessions.values()
+        now = self._market_now or time.time()
+        fresh = [s.to_dict(now) for s in self.sessions.values()
                  if now - s.last_update < 1800]
         try:
             payload = {
@@ -837,6 +883,10 @@ class M08_Robots(Module):
     def evaluate(self, states, ctx):
         out = []
         ts_now = ctx.get("ts", time.time())
+        # Exchange clock: trade timestamps, not wall clock. They differ after
+        # the close and during auctions (the tape freezes, the clock does not).
+        market_now = float(ctx.get("market_ts") or ts_now)
+        self._market_now = market_now
         new_alerts = []
 
 # Robot detection uses REAL trade data from trades.json (MOEX ISS REST).
@@ -982,13 +1032,13 @@ class M08_Robots(Module):
                     new_alerts.append(key)
                     self._maybe_alert_sound(t, is_new=True)
 
-        # Purge stale sessions — only remove if we haven't confirmed the pattern
-        # in the last 30 min (using _last_confirmed, not trade timestamp)
-        now = time.time()
+        # Purge stale sessions — keeps DB fresh:
+        #   * ticker no longer watched (equity list changed) after 10 market min
+        #   * any session not updated for 30 market minutes
         for key in list(self.sessions.keys()):
             sess = self.sessions[key]
-            last_confirmed = getattr(sess, '_last_confirmed', sess.last_update)
-            if now - last_confirmed > 1800:
+            idle = market_now - sess.last_update
+            if (sess.ticker not in states and idle > 600) or idle > 1800:
                 del self.sessions[key]
                 print(f"[M08] purged stale session {key}")
 
@@ -1386,18 +1436,24 @@ def _fetch_boardprice_rest(ticker: str, depth: int = 5) -> dict:
     }
 
 
-def _fetch_trades_rest(ticker: str, limit: int = 50) -> list[dict]:
-    """Fetch the LAST N trades from MOEX ISS REST (guest access, trades.json).
+def _fetch_trades_rest(ticker: str, limit: int = 50, total: int | None = None) -> list[dict]:
+    """Fetch the last N trades from MOEX ISS REST (guest access, trades.json).
 
-    MOEX ignores iss.sort for trades.json and returns rows from the START of the
-    session. To get the freshest trades we first read the cursor TOTAL and then
-    request the tail via iss.start.
+    ISS ignores iss.limit/iss.sort on trades.json and returns at most 5000
+    rows starting from the beginning of the session, so the "last" trades of
+    a liquid ticker would really be its morning trades. boardprice gives us
+    NUMTRADES (trades executed today) — use it as the offset via `start=` to
+    read the actual tail of the tape.
 
     Returns list of {ts, price, qty, buy_sell} sorted oldest-first.
     """
-    base_url = (
+    start = 0
+    if total and total > limit:
+        start = max(0, int(total) - limit - 5)
+    url = (
         f"{BASE}/engines/stock/markets/shares/boards/TQBR"
-        f"/securities/{ticker}/trades.json?iss.meta=off"
+        f"/securities/{ticker}/trades.json"
+        f"?iss.meta=off&start={start}"
     )
 
     def _get(url):
@@ -1447,14 +1503,16 @@ def _fetch_trades_rest(ticker: str, limit: int = 50) -> list[dict]:
             out.append({"ts": ts, "price": price, "qty": qty, "buy_sell": bs})
         except (ValueError, TypeError):
             continue
-    # Keep chronological order (rows come oldest-first within the tail window)
+    # Sort by real timestamp (ISS paging order is not guaranteed) and keep the
+    # requested amount of the freshest trades.
     out.sort(key=lambda r: r["ts"])
-    return out
+    return out[-limit:] if limit else out
 
 
 def _fetch_oi_rest(ticker: str) -> Optional[float]:
+    # Derivatives live on the FORTS engine/board (RFUD), not on the stock engine
     url = (
-        f"{BASE}/engines/stock/markets/futures/boards/FUTURE"
+        f"{BASE}/engines/futures/markets/forts"
         f"/securities/{ticker}/openInterest.json?iss.meta=off"
     )
     req = urllib.request.Request(url, headers={"User-Agent": "moex-screener/3.1"})
@@ -1463,12 +1521,16 @@ def _fetch_oi_rest(ticker: str) -> Optional[float]:
             payload = json.loads(resp.read().decode("utf-8"))
     except Exception:
         return None
-    rows = (payload.get("data") or [])
+    md = payload.get("marketdata") or {}
+    rows = md.get("data") or []
     if not rows:
         return None
-    cols = payload.get("columns") or []
+    cols = md.get("columns") or []
     d = dict(zip(cols, rows[-1]))
-    oi = d.get("OPENINTEREST")
+    # futures.json/marketdata expose OPENPOSITION; older endpoints used OPENINTEREST
+    oi = d.get("OPENPOSITION")
+    if oi in (None, ""):
+        oi = d.get("OPENINTEREST")
     try:
         return float(oi) if oi not in (None, "") else None
     except (ValueError, TypeError):
@@ -1489,8 +1551,8 @@ class ScreenerEngine:
             print("[BOOT] No equities — falling back to CORE_EQUITIES")
             self.equities = list(CORE_EQUITIES)
         if not self.futures:
-            print("[BOOT] No futures — falling back to core-4")
-            self.futures = ["SIU6", "BRU6", "GDH6", "MEU6"]
+            print("[BOOT] No futures from ISS — M09 (open interest) disabled")
+            self.futures = []
         self.arba_pairs = arba_pairs or ARBA_PAIRS
 
         self.states: dict[str, TickerState] = {t: TickerState(t) for t in self.equities}
@@ -1526,6 +1588,7 @@ class ScreenerEngine:
         self.running = True
         self._last_oi_ts = 0.0
         self._last_trade_feed_ts = 0.0
+        self._market_ts = 0.0  # newest exchange trade timestamp seen
 
     def _handle_sigint(self, *_):
         print("\n[!] Stop")
@@ -1543,6 +1606,7 @@ class ScreenerEngine:
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             boardprice_results = list(executor.map(fetch_boardprice, self.equities))
         
+        numtrades_by_ticker: dict[str, int] = {}
         for t, data in boardprice_results:
             if not data:
                 continue
@@ -1552,14 +1616,18 @@ class ScreenerEngine:
             st.ask = data.get("ask")
             st.day_volume = data.get("day_volume")
             st.day_value = data.get("day_value")
-            
+
             qty = data.get("qty")
             st.volume = qty
-            
+            nt = data.get("numtrades")
+            if nt:
+                numtrades_by_ticker[t] = int(nt)
+
+            # Price history for the price-based modules (M02/M13/M14).
+            # Real trades are pushed in step 2 — boardprice QTY is the size of
+            # the last trade, not a new trade, so it must not be counted again.
             if st.last is not None:
                 st.push_candle(ts, st.last, qty or 0.0)
-                # Do NOT push synthetic boardprice trade — it pollutes M08 robot detection
-                # with fake trades at the last price every cycle.
 
         # Step 2: Fetch trades for all equities (parallel).
         # Primary source: T-Bank Invest API (clean 90-min window, exact timestamps).
@@ -1578,13 +1646,17 @@ class ScreenerEngine:
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             trades_results = list(executor.map(fetch_trades, self.equities))
-        
+
         for t, real_trades in trades_results:
             st = self.states.get(t)
             if not st:
                 continue
             for rt in real_trades:
-                st.push_trade(rt["price"], rt["qty"], rt["ts"], rt.get("buy_sell", ""))
+                if st.push_trade(rt["price"], rt["qty"], rt["ts"], rt.get("buy_sell", "")):
+                    # Track the newest exchange timestamp we have seen: the
+                    # market clock may lag wall-clock time (auctions, after close).
+                    if rt["ts"] > self._market_ts:
+                        self._market_ts = rt["ts"]
 
         # M10 Arba: fetch paired tickers and update spread (parallel)
         def fetch_arba_pair(pair):
@@ -1620,7 +1692,7 @@ class ScreenerEngine:
             self._last_oi_ts = time.time()
 
     def collect_signals(self) -> list[Signal]:
-        ctx = {"ts": time.time()}
+        ctx = {"ts": time.time(), "market_ts": self._market_ts or time.time()}
         out: list[Signal] = []
         for m in self.modules:
             out.extend(m.evaluate(self.states, ctx))
@@ -1628,7 +1700,7 @@ class ScreenerEngine:
         return out
 
     def render(self, sigs: list[Signal]):
-        now = datetime.now().strftime("%H:%M:%S")
+        now = _msk_now().strftime("%H:%M:%S")
         total_updates = sum(s.updates for s in self.states.values())
         print(f"\n{'=' * 64}")
         print(f"  MOEX SCREENER v3.1  ({now})  REST  updates={total_updates}")
@@ -1658,7 +1730,11 @@ class ScreenerEngine:
             _os.makedirs(snap_dir, exist_ok=True)
             snap = {
                 "ts": time.time(),
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "time": _msk_now().strftime("%Y-%m-%d %H:%M:%S"),
+                "exchange_time": (
+                    datetime.fromtimestamp(self._market_ts, tz=MSK_TZ).strftime("%H:%M:%S")
+                    if self._market_ts else None
+                ),
                 "signals": [
                     {"module": s.module, "ticker": s.ticker,
                      "value": s.value, "text": s.text, "severity": s.severity}
@@ -1685,11 +1761,10 @@ class ScreenerEngine:
                     "z_score": ps.z_score,
                 })
             # Robots (from M08) — include BOTH active and recently-closed sessions
-            for m in self.modules:
-                if "М8" in m.name and hasattr(m, "sessions"):
-                    for sess in m.sessions.values():
-                        snap["robots"].append(sess.to_dict())
-                    break
+            robots_mod = next((m for m in self.modules if m.name.startswith("М8")), None)
+            if robots_mod and hasattr(robots_mod, "sessions"):
+                snap["robots"] = [s.to_dict(self._market_ts or None)
+                                  for s in robots_mod.sessions.values()]
             # Atomic write: tmp -> rename (no truncated JSON on crash)
             tmp_path = _os.path.join(snap_dir, "screener.json.tmp")
             with open(tmp_path, "w", encoding="utf-8") as f:
@@ -1732,10 +1807,14 @@ def start_http_server(directory: str, port: int = 8080):
     import functools
     import threading
 
-    handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler,
-        directory=directory,
-    )
+    class QuietHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, directory=directory, **kw)
+
+        def log_message(self, *args):
+            pass  # dashboard polls every 5s — keep the console readable
+
+    handler = QuietHandler
 
     # Allow reuse of the port and run requests in threads so a slow
     # REST poll cycle never blocks the HTTP listener.
@@ -1757,11 +1836,27 @@ async def main():
     cycles: int | None = None
     args = sys.argv[1:]
     use_http = False
+    port = 8080
     if "--rest" in args:
         args.remove("--rest")
     if "--http" in args:
         args.remove("--http")
         use_http = True
+    if "--port" in args:
+        idx = args.index("--port")
+        if idx + 1 < len(args) and args[idx + 1].isdigit():
+            port = int(args[idx + 1])
+            del args[idx:idx + 2]
+        else:
+            del args[idx]
+    if "--help" in args or "-h" in args:
+        print("MOEX Screener v3.1")
+        print("  python moex_screener_v3_1.py [cycles] [--rest] [--http] [--port N]")
+        print("    cycles   number of poll cycles before exit (default: unlimited)")
+        print("    --rest   REST mode (default and only data source in v3.1)")
+        print("    --http   serve dashboard.html + data/ over HTTP")
+        print("    --port   HTTP port for --http (default 8080)")
+        return
     if args and args[0].isdigit():
         cycles = int(args[0])
     engine = ScreenerEngine()
@@ -1770,7 +1865,7 @@ async def main():
         import os as _os
         proj_dir = _os.path.dirname(_os.path.abspath(__file__))
         _os.makedirs(_os.path.join(proj_dir, "data"), exist_ok=True)
-        start_http_server(proj_dir)
+        start_http_server(proj_dir, port)
 
     await engine.run(cycles=cycles, use_ws=False)
 
